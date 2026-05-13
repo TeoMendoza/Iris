@@ -9,7 +9,16 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
+import {
+  Status,
+} from "./types";
+
 
 export default __t.row({
-  name: __t.string(),
+  id: __t.u64().primaryKey(),
+  itemInformationId: __t.u64().name("item_information_id"),
+  get status() {
+    return Status;
+  },
+  price: __t.f64(),
 });

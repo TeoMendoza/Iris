@@ -5,7 +5,8 @@ use crate::*;
 pub struct Company {
     #[primary_key] #[auto_inc] pub id: u64,
     pub name: String,
-    #[unique] pub code: String
+    #[unique] pub code: String,
+    pub vision_key: String,
 }
 
 #[table(accessor = user, public)]
@@ -18,28 +19,30 @@ pub struct User {
 #[table(accessor = employee, public)]
 pub struct Employee {
     #[primary_key] pub id: Identity,
-    pub company_id: u64,
+}
+
+#[table(accessor = vision_client)]
+pub struct VisionClient {
+    #[primary_key] pub identity: Identity,
 }
 
 #[table(accessor = unprocessed_image, public)]
 pub struct UnprocessedImage {
     #[primary_key] #[auto_inc] pub id: u64,
-    pub company_id: u64,
     pub image_bytes: Vec<u8>,
 }
 
 #[table(accessor = processing_image, public)]
 pub struct ProcessingImage {
     #[primary_key] #[auto_inc] pub id: u64,
-    pub company_id: u64,
     pub image_bytes: Vec<u8>,
     pub claimed_at: Timestamp,
+    pub claimed_by: Identity,
 }
 
 #[table(accessor = processed_image, public)]
 pub struct ProcessedImage {
     #[primary_key] #[auto_inc] pub id: u64,
-    pub company_id: u64,
     pub image_bytes: Vec<u8>,
     pub predicted_category: Category,
     pub predicted_color: Color,
@@ -49,7 +52,6 @@ pub struct ProcessedImage {
 #[table(accessor = item_information, public)]
 pub struct ItemInformation {
     #[primary_key] #[auto_inc] pub id: u64,
-    pub company_id: u64,
     pub processed_image_id: u64,
     pub image_bytes: Vec<u8>,
     pub category: Category,

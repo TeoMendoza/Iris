@@ -34,31 +34,143 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
-import AddReducer from "./add_reducer";
-import SayHelloReducer from "./say_hello_reducer";
+import CreateCompanyReducer from "./create_company_reducer";
+import JoinCompanyReducer from "./join_company_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
-import PersonRow from "./person_table";
+import CompanyRow from "./company_table";
+import EmployeeRow from "./employee_table";
+import InventoryItemRow from "./inventory_item_table";
+import ItemClassificationRow from "./item_classification_table";
+import ItemInformationRow from "./item_information_table";
+import ProcessedImageRow from "./processed_image_table";
+import ProcessingImageRow from "./processing_image_table";
+import UnprocessedImageRow from "./unprocessed_image_table";
+import UserRow from "./user_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
-  person: __table({
-    name: 'person',
+  company: __table({
+    name: 'company',
     indexes: [
+      { accessor: 'code', name: 'company_code_idx_btree', algorithm: 'btree', columns: [
+        'code',
+      ] },
+      { accessor: 'id', name: 'company_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
     ],
     constraints: [
+      { name: 'company_code_key', constraint: 'unique', columns: ['code'] },
+      { name: 'company_id_key', constraint: 'unique', columns: ['id'] },
     ],
-  }, PersonRow),
+  }, CompanyRow),
+  employee: __table({
+    name: 'employee',
+    indexes: [
+      { accessor: 'id', name: 'employee_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'employee_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, EmployeeRow),
+  inventory_item: __table({
+    name: 'inventory_item',
+    indexes: [
+      { accessor: 'id', name: 'inventory_item_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'item_information_id', name: 'inventory_item_item_information_id_idx_btree', algorithm: 'btree', columns: [
+        'itemInformationId',
+      ] },
+    ],
+    constraints: [
+      { name: 'inventory_item_id_key', constraint: 'unique', columns: ['id'] },
+      { name: 'inventory_item_item_information_id_key', constraint: 'unique', columns: ['itemInformationId'] },
+    ],
+  }, InventoryItemRow),
+  item_classification: __table({
+    name: 'item_classification',
+    indexes: [
+      { accessor: 'id', name: 'item_classification_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'item_information_id', name: 'item_classification_item_information_id_idx_btree', algorithm: 'btree', columns: [
+        'itemInformationId',
+      ] },
+    ],
+    constraints: [
+      { name: 'item_classification_id_key', constraint: 'unique', columns: ['id'] },
+      { name: 'item_classification_item_information_id_key', constraint: 'unique', columns: ['itemInformationId'] },
+    ],
+  }, ItemClassificationRow),
+  item_information: __table({
+    name: 'item_information',
+    indexes: [
+      { accessor: 'id', name: 'item_information_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'item_information_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ItemInformationRow),
+  processed_image: __table({
+    name: 'processed_image',
+    indexes: [
+      { accessor: 'id', name: 'processed_image_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'processed_image_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ProcessedImageRow),
+  processing_image: __table({
+    name: 'processing_image',
+    indexes: [
+      { accessor: 'id', name: 'processing_image_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'processing_image_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, ProcessingImageRow),
+  unprocessed_image: __table({
+    name: 'unprocessed_image',
+    indexes: [
+      { accessor: 'id', name: 'unprocessed_image_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'unprocessed_image_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, UnprocessedImageRow),
+  user: __table({
+    name: 'user',
+    indexes: [
+      { accessor: 'id', name: 'user_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'user_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, UserRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
-  __reducerSchema("add", AddReducer),
-  __reducerSchema("say_hello", SayHelloReducer),
+  __reducerSchema("create_company", CreateCompanyReducer),
+  __reducerSchema("join_company", JoinCompanyReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

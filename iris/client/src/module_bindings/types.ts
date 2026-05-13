@@ -10,8 +10,125 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export const Person = __t.object("Person", {
-  name: __t.string(),
+// The tagged union or sum type for the algebraic type `Category`.
+export const Category = __t.enum("Category", {
+  Shirts: __t.unit(),
+  Pants: __t.unit(),
 });
-export type Person = __Infer<typeof Person>;
+export type Category = __Infer<typeof Category>;
+
+// The tagged union or sum type for the algebraic type `Color`.
+export const Color = __t.enum("Color", {
+  Red: __t.unit(),
+  Blue: __t.unit(),
+});
+export type Color = __Infer<typeof Color>;
+
+export const Company = __t.object("Company", {
+  id: __t.u64(),
+  name: __t.string(),
+  code: __t.string(),
+});
+export type Company = __Infer<typeof Company>;
+
+// The tagged union or sum type for the algebraic type `Demographic`.
+export const Demographic = __t.enum("Demographic", {
+  Mens: __t.unit(),
+  Womens: __t.unit(),
+});
+export type Demographic = __Infer<typeof Demographic>;
+
+export const Employee = __t.object("Employee", {
+  id: __t.identity(),
+  companyId: __t.u64(),
+});
+export type Employee = __Infer<typeof Employee>;
+
+export const InventoryItem = __t.object("InventoryItem", {
+  id: __t.u64(),
+  itemInformationId: __t.u64(),
+  get status() {
+    return Status;
+  },
+  price: __t.f64(),
+});
+export type InventoryItem = __Infer<typeof InventoryItem>;
+
+export const ItemClassification = __t.object("ItemClassification", {
+  id: __t.u64(),
+  itemInformationId: __t.u64(),
+  get predictedCategory() {
+    return Category;
+  },
+  get predictedColor() {
+    return Color;
+  },
+  get predictedDemographic() {
+    return Demographic;
+  },
+});
+export type ItemClassification = __Infer<typeof ItemClassification>;
+
+export const ItemInformation = __t.object("ItemInformation", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  processedImageId: __t.u64(),
+  imageBytes: __t.byteArray(),
+  get category() {
+    return Category;
+  },
+  get color() {
+    return Color;
+  },
+  get demographic() {
+    return Demographic;
+  },
+});
+export type ItemInformation = __Infer<typeof ItemInformation>;
+
+export const ProcessedImage = __t.object("ProcessedImage", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  imageBytes: __t.byteArray(),
+  get predictedCategory() {
+    return Category;
+  },
+  get predictedColor() {
+    return Color;
+  },
+  get predictedDemographic() {
+    return Demographic;
+  },
+});
+export type ProcessedImage = __Infer<typeof ProcessedImage>;
+
+export const ProcessingImage = __t.object("ProcessingImage", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  imageBytes: __t.byteArray(),
+  claimedAt: __t.timestamp(),
+});
+export type ProcessingImage = __Infer<typeof ProcessingImage>;
+
+// The tagged union or sum type for the algebraic type `Status`.
+export const Status = __t.enum("Status", {
+  Sold: __t.unit(),
+  Shelf: __t.unit(),
+  Storage: __t.unit(),
+});
+export type Status = __Infer<typeof Status>;
+
+export const UnprocessedImage = __t.object("UnprocessedImage", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  imageBytes: __t.byteArray(),
+});
+export type UnprocessedImage = __Infer<typeof UnprocessedImage>;
+
+export const User = __t.object("User", {
+  id: __t.identity(),
+  name: __t.string(),
+  email: __t.string(),
+});
+export type User = __Infer<typeof User>;
 
