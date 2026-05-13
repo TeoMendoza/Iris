@@ -1,8 +1,11 @@
 **`companies`**
 - id, name
 
+**`users`**
+- id, name, email
+
 **`employees`**
-- id, company_id, name, email, is_admin
+- id, user_id, company_id
 
 **`unprocessed_images`**
 - id, company_id, uploaded_by, uploaded_at, image_bytes

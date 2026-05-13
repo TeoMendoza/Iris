@@ -5,7 +5,7 @@ import './App.css'
 
 const connectionBuilder = DbConnection.builder()
   .withUri('ws://localhost:3000')
-  .withDatabaseName('black-box')
+  .withDatabaseName('iris')
   .onConnect((conn: DbConnection) => {
     conn.subscriptionBuilder().subscribe(tables.person)
   })
