@@ -10,6 +10,14 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+import {
+  Status,
+} from "./types";
+
 export default {
-  name: __t.string(),
+  itemId: __t.u64(),
+  get status() {
+    return Status;
+  },
+  price: __t.f64(),
 };

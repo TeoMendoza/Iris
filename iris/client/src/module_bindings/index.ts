@@ -34,15 +34,22 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
-import CreateCompanyReducer from "./create_company_reducer";
+import ClaimImagesReducer from "./claim_images_reducer";
+import ConfirmProcessedImageReducer from "./confirm_processed_image_reducer";
 import JoinCompanyReducer from "./join_company_reducer";
+import RegisterVisionClientReducer from "./register_vision_client_reducer";
+import SeedTestProcessedImageReducer from "./seed_test_processed_image_reducer";
+import SubmitProcessedImageReducer from "./submit_processed_image_reducer";
+import UpdateInventoryItemReducer from "./update_inventory_item_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
 import CompanyRow from "./company_table";
 import EmployeeRow from "./employee_table";
+import InventoryRow from "./inventory_table";
 import InventoryItemRow from "./inventory_item_table";
+import InventoryToReviewRow from "./inventory_to_review_table";
 import ItemClassificationRow from "./item_classification_table";
 import ItemInformationRow from "./item_information_table";
 import ProcessedImageRow from "./processed_image_table";
@@ -165,12 +172,31 @@ const tablesSchema = __schema({
       { name: 'user_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, UserRow),
+  inventory: __table({
+    name: 'inventory',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, InventoryRow),
+  inventory_to_review: __table({
+    name: 'inventory_to_review',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, InventoryToReviewRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
-  __reducerSchema("create_company", CreateCompanyReducer),
+  __reducerSchema("claim_images", ClaimImagesReducer),
+  __reducerSchema("confirm_processed_image", ConfirmProcessedImageReducer),
   __reducerSchema("join_company", JoinCompanyReducer),
+  __reducerSchema("register_vision_client", RegisterVisionClientReducer),
+  __reducerSchema("seed_test_processed_image", SeedTestProcessedImageReducer),
+  __reducerSchema("submit_processed_image", SubmitProcessedImageReducer),
+  __reducerSchema("update_inventory_item", UpdateInventoryItemReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

@@ -28,6 +28,7 @@ export const Company = __t.object("Company", {
   id: __t.u64(),
   name: __t.string(),
   code: __t.string(),
+  visionKey: __t.string(),
 });
 export type Company = __Infer<typeof Company>;
 
@@ -40,13 +41,13 @@ export type Demographic = __Infer<typeof Demographic>;
 
 export const Employee = __t.object("Employee", {
   id: __t.identity(),
-  companyId: __t.u64(),
 });
 export type Employee = __Infer<typeof Employee>;
 
 export const InventoryItem = __t.object("InventoryItem", {
   id: __t.u64(),
   itemInformationId: __t.u64(),
+  imageBytes: __t.byteArray(),
   get status() {
     return Status;
   },
@@ -71,7 +72,6 @@ export type ItemClassification = __Infer<typeof ItemClassification>;
 
 export const ItemInformation = __t.object("ItemInformation", {
   id: __t.u64(),
-  companyId: __t.u64(),
   processedImageId: __t.u64(),
   imageBytes: __t.byteArray(),
   get category() {
@@ -88,7 +88,6 @@ export type ItemInformation = __Infer<typeof ItemInformation>;
 
 export const ProcessedImage = __t.object("ProcessedImage", {
   id: __t.u64(),
-  companyId: __t.u64(),
   imageBytes: __t.byteArray(),
   get predictedCategory() {
     return Category;
@@ -104,9 +103,9 @@ export type ProcessedImage = __Infer<typeof ProcessedImage>;
 
 export const ProcessingImage = __t.object("ProcessingImage", {
   id: __t.u64(),
-  companyId: __t.u64(),
   imageBytes: __t.byteArray(),
   claimedAt: __t.timestamp(),
+  claimedBy: __t.identity(),
 });
 export type ProcessingImage = __Infer<typeof ProcessingImage>;
 
@@ -120,7 +119,6 @@ export type Status = __Infer<typeof Status>;
 
 export const UnprocessedImage = __t.object("UnprocessedImage", {
   id: __t.u64(),
-  companyId: __t.u64(),
   imageBytes: __t.byteArray(),
 });
 export type UnprocessedImage = __Infer<typeof UnprocessedImage>;
@@ -131,4 +129,9 @@ export const User = __t.object("User", {
   email: __t.string(),
 });
 export type User = __Infer<typeof User>;
+
+export const VisionClient = __t.object("VisionClient", {
+  identity: __t.identity(),
+});
+export type VisionClient = __Infer<typeof VisionClient>;
 

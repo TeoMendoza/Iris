@@ -96,3 +96,53 @@ pub fn submit_processed_image(ctx: &ReducerContext, processing_id: u64, category
     });
     Ok(())
 }
+
+#[reducer]
+pub fn confirm_processed_image(ctx: &ReducerContext, processed_image_id: u64, category: Category, color: Color, demographic: Demographic) -> Result<(), String> {
+    ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
+    let processed = ctx.db.processed_image().id().find(processed_image_id).ok_or("Not found")?;
+    let info = ctx.db.item_information().insert(ItemInformation {
+        id: 0,
+        processed_image_id,
+        image_bytes: processed.image_bytes.clone(),
+        category,
+        color,
+        demographic,
+    });
+    ctx.db.item_classification().insert(ItemClassification {
+        id: 0,
+        item_information_id: info.id,
+        predicted_category: processed.predicted_category,
+        predicted_color: processed.predicted_color,
+        predicted_demographic: processed.predicted_demographic,
+    });
+    ctx.db.inventory_item().insert(InventoryItem {
+        id: 0,
+        item_information_id: info.id,
+        image_bytes: processed.image_bytes,
+        status: Status::Storage,
+        price: 25.0,
+    });
+    ctx.db.processed_image().id().delete(&processed_image_id);
+    Ok(())
+}
+
+#[reducer]
+pub fn update_inventory_item(ctx: &ReducerContext, item_id: u64, status: Status, price: f64) -> Result<(), String> {
+    ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
+    let item = ctx.db.inventory_item().id().find(item_id).ok_or("Not found")?;
+    ctx.db.inventory_item().id().update(InventoryItem { status, price, ..item });
+    Ok(())
+}
+
+#[reducer]
+pub fn seed_test_processed_image(ctx: &ReducerContext) {
+    let image_bytes: Vec<u8> = (0..=255_u8).collect();
+    ctx.db.processed_image().insert(ProcessedImage {
+        id: 0,
+        image_bytes,
+        predicted_category: Category::Shirts,
+        predicted_color: Color::Red,
+        predicted_demographic: Demographic::Mens,
+    });
+}

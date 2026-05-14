@@ -12,5 +12,4 @@ import {
 
 export default __t.row({
   id: __t.identity().primaryKey(),
-  companyId: __t.u64().name("company_id"),
 });

@@ -12,7 +12,7 @@ import {
 
 export default __t.row({
   id: __t.u64().primaryKey(),
-  companyId: __t.u64().name("company_id"),
   imageBytes: __t.byteArray().name("image_bytes"),
   claimedAt: __t.timestamp().name("claimed_at"),
+  claimedBy: __t.identity().name("claimed_by"),
 });

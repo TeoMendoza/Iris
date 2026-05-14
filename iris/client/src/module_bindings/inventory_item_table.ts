@@ -17,6 +17,7 @@ import {
 export default __t.row({
   id: __t.u64().primaryKey(),
   itemInformationId: __t.u64().name("item_information_id"),
+  imageBytes: __t.byteArray().name("image_bytes"),
   get status() {
     return Status;
   },

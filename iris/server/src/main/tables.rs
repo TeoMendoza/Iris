@@ -72,6 +72,7 @@ pub struct ItemClassification {
 pub struct InventoryItem {
     #[primary_key] #[auto_inc] pub id: u64,
     #[unique] pub item_information_id: u64,
+    pub image_bytes: Vec<u8>,
     pub status: Status,
     pub price: f64,
 }

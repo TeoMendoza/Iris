@@ -14,4 +14,5 @@ export default __t.row({
   id: __t.u64().primaryKey(),
   name: __t.string(),
   code: __t.string(),
+  visionKey: __t.string().name("vision_key"),
 });

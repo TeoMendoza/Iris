@@ -18,7 +18,6 @@ import {
 
 export default __t.row({
   id: __t.u64().primaryKey(),
-  companyId: __t.u64().name("company_id"),
   processedImageId: __t.u64().name("processed_image_id"),
   imageBytes: __t.byteArray().name("image_bytes"),
   get category() {
