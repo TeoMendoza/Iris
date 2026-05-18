@@ -6,8 +6,8 @@ const CLAIM_BATCH_SIZE: usize = 10;
 
 #[reducer(init)]
 pub fn init(ctx: &ReducerContext) {
-    let code = format!("{:016X}", ctx.rng().next_u64());
-    let vision_key = format!("{:016X}", ctx.rng().next_u64());
+    let code = format!("{:016x}", ctx.rng().next_u64());
+    let vision_key = format!("{:016x}", ctx.rng().next_u64());
     ctx.db.company().insert(Company { id: 0, name: "iris-labs".to_string(), code, vision_key });
 }
 
@@ -27,6 +27,7 @@ pub fn identity_disconnected(_ctx: &ReducerContext) { }
 
 #[reducer]
 pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
+    log::info!("Client Sent Code: {}", code.to_string());
     if ctx.db.user().id().find(ctx.sender()).is_none() {
         return Err("User not found".to_string());
     }
@@ -35,7 +36,7 @@ pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
         return Err("Already in company".to_string());
     }
 
-    ctx.db.company().code().find(&code).ok_or("Invalid code")?;
+    ctx.db.company().code().find(&code.to_lowercase()).ok_or("Invalid code")?;
     ctx.db.employee().insert(Employee { id: ctx.sender() });
     Ok(())
 }
@@ -43,7 +44,7 @@ pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
 #[reducer]
 pub fn register_vision_client(ctx: &ReducerContext, key: String) -> Result<(), String> {
     let company = ctx.db.company().iter().next().ok_or("Company not found")?;
-    if key != company.vision_key {
+    if key.to_lowercase() != company.vision_key {
         return Err("Invalid key".to_string());
     }
 
@@ -135,9 +136,18 @@ pub fn update_inventory_item(ctx: &ReducerContext, item_id: u64, status: Status,
     Ok(())
 }
 
+
 #[reducer]
 pub fn seed_test_processed_image(ctx: &ReducerContext) {
-    let image_bytes: Vec<u8> = (0..=255_u8).collect();
+    let image_bytes: Vec<u8> = vec![
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
+        0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, // 1x1, global color table
+        0xFF, 0x00, 0x00, // color 0: red
+        0x00, 0x00, 0x00, // color 1: black
+        0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, // image descriptor
+        0x02, 0x02, 0x44, 0x01, 0x00, // LZW: clear, index=0 (red), EOI
+        0x3B, // trailer
+    ];
     ctx.db.processed_image().insert(ProcessedImage {
         id: 0,
         image_bytes,
