@@ -12,30 +12,26 @@ pub fn init(ctx: &ReducerContext) {
 }
 
 #[reducer(client_connected)]
-pub fn identity_connected(ctx: &ReducerContext) {
-    if ctx.db.user().id().find(ctx.sender()).is_none() {
-        ctx.db.user().insert(User {
-            id: ctx.sender(),
-            name: ctx.sender().to_hex().to_string(),
-            email: String::new(),
-        });
-    }
-}
+pub fn identity_connected(_ctx: &ReducerContext) { }
 
 #[reducer(client_disconnected)]
 pub fn identity_disconnected(_ctx: &ReducerContext) { }
 
 #[reducer]
-pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
-    log::info!("Client Sent Code: {}", code.to_string());
-    if ctx.db.user().id().find(ctx.sender()).is_none() {
-        return Err("User not found".to_string());
+pub fn create_user(ctx: &ReducerContext, name: String, email: String) -> Result<(), String> {
+    if ctx.db.user().id().find(ctx.sender()).is_some() {
+        return Err("User already exists".to_string());
     }
+    ctx.db.user().insert(User { id: ctx.sender(), name, email });
+    Ok(())
+}
 
+#[reducer]
+pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
+    ctx.db.user().id().find(ctx.sender()).ok_or("No user account")?;
     if ctx.db.employee().id().find(ctx.sender()).is_some() {
         return Err("Already in company".to_string());
     }
-
     ctx.db.company().code().find(&code.to_lowercase()).ok_or("Invalid code")?;
     ctx.db.employee().insert(Employee { id: ctx.sender() });
     Ok(())
@@ -138,21 +134,12 @@ pub fn update_inventory_item(ctx: &ReducerContext, item_id: u64, status: Status,
 
 
 #[reducer]
-pub fn seed_test_processed_image(ctx: &ReducerContext) {
-    let image_bytes: Vec<u8> = vec![
-        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
-        0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, // 1x1, global color table
-        0xFF, 0x00, 0x00, // color 0: red
-        0x00, 0x00, 0x00, // color 1: black
-        0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, // image descriptor
-        0x02, 0x02, 0x44, 0x01, 0x00, // LZW: clear, index=0 (red), EOI
-        0x3B, // trailer
-    ];
-    ctx.db.processed_image().insert(ProcessedImage {
-        id: 0,
-        image_bytes,
-        predicted_category: Category::Shirts,
-        predicted_color: Color::Red,
-        predicted_demographic: Demographic::Mens,
-    });
+pub fn upload_image(ctx: &ReducerContext, image_bytes: Vec<u8>) -> Result<(), String> {
+    ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
+    if image_bytes.is_empty() {
+        return Err("image_bytes is empty".to_string());
+    }
+    ctx.db.unprocessed_image().insert(UnprocessedImage { id: 0, image_bytes });
+    Ok(())
 }
+

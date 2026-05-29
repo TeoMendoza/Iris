@@ -8,17 +8,19 @@ import { type Infer as __Infer } from "spacetimedb";
 // Import all reducer arg schemas
 import ClaimImagesReducer from "../claim_images_reducer";
 import ConfirmProcessedImageReducer from "../confirm_processed_image_reducer";
+import CreateUserReducer from "../create_user_reducer";
 import JoinCompanyReducer from "../join_company_reducer";
 import RegisterVisionClientReducer from "../register_vision_client_reducer";
-import SeedTestProcessedImageReducer from "../seed_test_processed_image_reducer";
 import SubmitProcessedImageReducer from "../submit_processed_image_reducer";
 import UpdateInventoryItemReducer from "../update_inventory_item_reducer";
+import UploadImageReducer from "../upload_image_reducer";
 
 export type ClaimImagesParams = __Infer<typeof ClaimImagesReducer>;
 export type ConfirmProcessedImageParams = __Infer<typeof ConfirmProcessedImageReducer>;
+export type CreateUserParams = __Infer<typeof CreateUserReducer>;
 export type JoinCompanyParams = __Infer<typeof JoinCompanyReducer>;
 export type RegisterVisionClientParams = __Infer<typeof RegisterVisionClientReducer>;
-export type SeedTestProcessedImageParams = __Infer<typeof SeedTestProcessedImageReducer>;
 export type SubmitProcessedImageParams = __Infer<typeof SubmitProcessedImageReducer>;
 export type UpdateInventoryItemParams = __Infer<typeof UpdateInventoryItemReducer>;
+export type UploadImageParams = __Infer<typeof UploadImageReducer>;
 

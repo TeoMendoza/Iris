@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SpacetimeDBProvider, useSpacetimeDB, useTable } from 'spacetimedb/react'
 import { DbConnection, tables } from './module_bindings'
 import './App.css'
 
+const savedToken = localStorage.getItem('iris_token') ?? undefined
+
 const connectionBuilder = DbConnection.builder()
-  .withUri('ws://localhost:3000')
+  .withUri('http://localhost:3000')
   .withDatabaseName('iris')
+  .withCompression('none')
+  .withToken(savedToken)
 
 // ── Image ─────────────────────────────────────────────────
 
@@ -18,7 +22,7 @@ function ItemImage({ bytes }: { bytes: Uint8Array }) {
     let mime = 'image/jpeg'
     if (bytes[0] === 0x89 && bytes[1] === 0x50) mime = 'image/png'
     else if (bytes[0] === 0x47 && bytes[1] === 0x49) mime = 'image/gif'
-    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: mime })
+    const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], { type: mime })
     const url = URL.createObjectURL(blob)
     setSrc(url)
     setFailed(false)
@@ -32,6 +36,43 @@ function ItemImage({ bytes }: { bytes: Uint8Array }) {
   return (
     <div className="img-wrap">
       <img src={src} alt="" onError={() => setFailed(true)} />
+    </div>
+  )
+}
+
+// ── Sign up ───────────────────────────────────────────────
+
+function SignUp() {
+  const { getConnection } = useSpacetimeDB()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+
+  function handleSignUp() {
+    if (!name.trim() || !email.trim()) return
+    getConnection()?.reducers.createUser({ name: name.trim(), email: email.trim() })
+  }
+
+  return (
+    <div className="join-page">
+      <div className="join-card">
+        <div className="join-logo">ir<em>i</em>s</div>
+        <p className="join-sub">Create your account to get started</p>
+        <input
+          className="join-input"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Your name"
+        />
+        <input
+          className="join-input"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSignUp()}
+          placeholder="Email address"
+          type="email"
+        />
+        <button className="join-btn" onClick={handleSignUp}>Create Account</button>
+      </div>
     </div>
   )
 }
@@ -129,7 +170,7 @@ function ReviewCard({ item }: { item: any }) {
 }
 
 function ReviewQueue() {
-  const [items] = useTable(tables.inventory_to_review)
+  const [items] = useTable(tables.processed_image)
 
   return (
     <div className="page">
@@ -217,19 +258,82 @@ function InventoryPage() {
   )
 }
 
+// ── Capture ───────────────────────────────────────────────
+
+function CapturePage() {
+  const { getConnection } = useSpacetimeDB()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [status, setStatus] = useState<'idle' | 'sent'>('idle')
+
+  useEffect(() => {
+    let stream: MediaStream | undefined
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(s => {
+        stream = s
+        if (videoRef.current) {
+          videoRef.current.srcObject = s
+          videoRef.current.play()
+        }
+      })
+      .catch(err => console.error('Camera error:', err))
+    return () => { stream?.getTracks().forEach(t => t.stop()) }
+  }, [])
+
+  function handleCapture() {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas) return
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    canvas.getContext('2d')!.drawImage(video, 0, 0)
+    canvas.toBlob(blob => {
+      if (!blob) return
+      blob.arrayBuffer().then(buf => {
+        getConnection()?.reducers.uploadImage({ imageBytes: new Uint8Array(buf) })
+        setStatus('sent')
+        setTimeout(() => setStatus('idle'), 1500)
+      })
+    }, 'image/jpeg', 0.85)
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h2 className="page-title">Capture</h2>
+      </div>
+      <div className="capture-zone">
+        <video ref={videoRef} className="capture-video" autoPlay playsInline muted />
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+      </div>
+      <button className="btn btn-confirm capture-upload-btn" onClick={handleCapture}>
+        {status === 'sent' ? 'Sent!' : 'Take Photo'}
+      </button>
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────
 
 function Main() {
-  const { isActive, identity } = useSpacetimeDB()
-  const [employees] = useTable(tables.employee)
+  const { isActive, token } = useSpacetimeDB()
+
+  useEffect(() => {
+    if (token) localStorage.setItem('iris_token', token)
+  }, [token])
+
+  const [myUserRows] = useTable(tables.my_user)
+  const [myEmployeeRows] = useTable(tables.my_employee)
   const [companies] = useTable(tables.company)
-  const [page, setPage] = useState<'review' | 'inventory'>('review')
+  const [page, setPage] = useState<'review' | 'inventory' | 'capture'>('review')
 
   if (!isActive) return <div className="connecting">Connecting…</div>
 
-  const myEmployee = employees.find(e => identity && e.id.isEqual(identity))
+  const myUser = myUserRows[0]
+  const myEmployee = myEmployeeRows[0]
   const myCompany = companies[0]
 
+  if (!myUser) return <SignUp />
   if (!myEmployee) return <JoinCompany />
 
   return (
@@ -238,8 +342,9 @@ function Main() {
         <span className="header-logo">ir<em>i</em>s — {myCompany?.name ?? ''}</span>
         <button className={`nav-btn${page === 'review' ? ' active' : ''}`} onClick={() => setPage('review')}>Review Queue</button>
         <button className={`nav-btn${page === 'inventory' ? ' active' : ''}`} onClick={() => setPage('inventory')}>Inventory</button>
+        <button className={`nav-btn${page === 'capture' ? ' active' : ''}`} onClick={() => setPage('capture')}>Capture</button>
       </header>
-      {page === 'review' ? <ReviewQueue /> : <InventoryPage />}
+      {page === 'review' ? <ReviewQueue /> : page === 'inventory' ? <InventoryPage /> : <CapturePage />}
     </>
   )
 }
