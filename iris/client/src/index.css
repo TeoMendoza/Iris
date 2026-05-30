@@ -1,46 +1,64 @@
 :root {
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.08);
-  --accent-border: rgba(170, 59, 255, 0.3);
+  --bg:      #f7f5ff;
+  --surface: #ede9f8;
+  --card:    #ffffff;
+
+  --sidebar-bg:          #f0ecfc;
+  --sidebar-border:      rgba(100,70,200,0.1);
+  --sidebar-text:        #6b5a9a;
+  --sidebar-active-bg:   #7c5ce7;
+  --sidebar-active-text: #ffffff;
+  --sidebar-hover:       rgba(100,70,200,0.07);
+
+  --lavender:        #7c5ce7;
+  --lavender-dark:   #5f3dc4;
+  --lavender-light:  #a48de8;
+  --lavender-bg:     rgba(124,92,231,0.09);
+  --lavender-border: rgba(124,92,231,0.22);
+
+  --sage:        #2d7d46;
+  --sage-light:  #52a568;
+  --sage-bg:     rgba(45,125,70,0.09);
+  --sage-border: rgba(45,125,70,0.22);
+
+  --amber:        #d97706;
+  --amber-bg:     rgba(217,119,6,0.09);
+  --amber-border: rgba(217,119,6,0.22);
+
+  --chart-shelf:   #2d7d46;
+  --chart-storage: #d97706;
+  --chart-sold:    #7c5ce7;
+
+  --text:       #1a1228;
+  --text-muted: #6b5f8e;
+  --text-dim:   #a598c4;
+
+  --border:     rgba(100,80,160,0.08);
+  --border-med: rgba(100,80,160,0.15);
+
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(80,50,150,0.07), 0 0 0 1px rgba(100,80,160,0.07);
+  --shadow:    0 4px 16px rgba(80,50,150,0.1),  0 0 0 1px rgba(100,80,160,0.07);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 15px/150% var(--sans);
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-body {
-  margin: 0;
-  background: #f4f3f8;
-  color: #08060d;
-}
+body { margin: 0; background: var(--bg); color: var(--text); }
 
-#root {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-}
+#root { min-height: 100svh; display: flex; flex-direction: column; }
 
-h1, h2, h3 {
-  margin: 0;
-  font-weight: 600;
-  color: #08060d;
-}
-
+h1, h2, h3 { margin: 0; font-weight: 700; color: var(--text); }
 p { margin: 0; }
-
-button {
-  font-family: var(--sans);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-input, select {
-  font-family: var(--sans);
-  font-size: 14px;
-}
+button { font-family: var(--sans); font-size: 14px; cursor: pointer; }
+input, select { font-family: var(--sans); font-size: 14px; }

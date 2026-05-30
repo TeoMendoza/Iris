@@ -46,13 +46,17 @@ import UploadImageReducer from "./upload_image_reducer";
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import AnalyticsOverviewRow from "./analytics_overview_table";
+import CategoryBreakdownRow from "./category_breakdown_table";
 import CompanyRow from "./company_table";
 import EmployeeRow from "./employee_table";
+import EmployeeStatsRow from "./employee_stats_table";
 import InventoryRow from "./inventory_table";
 import InventoryItemRow from "./inventory_item_table";
 import InventoryToReviewRow from "./inventory_to_review_table";
 import ItemClassificationRow from "./item_classification_table";
 import ItemInformationRow from "./item_information_table";
+import ModelAccuracyRow from "./model_accuracy_table";
 import MyEmployeeRow from "./my_employee_table";
 import MyUserRow from "./my_user_table";
 import ProcessedImageRow from "./processed_image_table";
@@ -73,15 +77,22 @@ const tablesSchema = __schema({
       { accessor: 'id', name: 'company_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
+      { accessor: 'vision_key', name: 'company_vision_key_idx_btree', algorithm: 'btree', columns: [
+        'visionKey',
+      ] },
     ],
     constraints: [
       { name: 'company_code_key', constraint: 'unique', columns: ['code'] },
       { name: 'company_id_key', constraint: 'unique', columns: ['id'] },
+      { name: 'company_vision_key_key', constraint: 'unique', columns: ['visionKey'] },
     ],
   }, CompanyRow),
   employee: __table({
     name: 'employee',
     indexes: [
+      { accessor: 'company_employees', name: 'employee_company_id_idx_btree', algorithm: 'btree', columns: [
+        'companyId',
+      ] },
       { accessor: 'id', name: 'employee_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
@@ -93,6 +104,9 @@ const tablesSchema = __schema({
   inventory_item: __table({
     name: 'inventory_item',
     indexes: [
+      { accessor: 'inventory_by_company', name: 'inventory_item_company_id_idx_btree', algorithm: 'btree', columns: [
+        'companyId',
+      ] },
       { accessor: 'id', name: 'inventory_item_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
@@ -108,6 +122,9 @@ const tablesSchema = __schema({
   item_classification: __table({
     name: 'item_classification',
     indexes: [
+      { accessor: 'item_class_by_company', name: 'item_classification_company_id_idx_btree', algorithm: 'btree', columns: [
+        'companyId',
+      ] },
       { accessor: 'id', name: 'item_classification_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
@@ -123,6 +140,12 @@ const tablesSchema = __schema({
   item_information: __table({
     name: 'item_information',
     indexes: [
+      { accessor: 'item_info_by_company', name: 'item_information_company_id_idx_btree', algorithm: 'btree', columns: [
+        'companyId',
+      ] },
+      { accessor: 'item_info_by_confirmer', name: 'item_information_confirmed_by_idx_btree', algorithm: 'btree', columns: [
+        'confirmedBy',
+      ] },
       { accessor: 'id', name: 'item_information_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
@@ -134,6 +157,9 @@ const tablesSchema = __schema({
   processed_image: __table({
     name: 'processed_image',
     indexes: [
+      { accessor: 'processed_by_company', name: 'processed_image_company_id_idx_btree', algorithm: 'btree', columns: [
+        'companyId',
+      ] },
       { accessor: 'id', name: 'processed_image_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
@@ -175,6 +201,27 @@ const tablesSchema = __schema({
       { name: 'user_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, UserRow),
+  analytics_overview: __table({
+    name: 'analytics_overview',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, AnalyticsOverviewRow),
+  category_breakdown: __table({
+    name: 'category_breakdown',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, CategoryBreakdownRow),
+  employee_stats: __table({
+    name: 'employee_stats',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, EmployeeStatsRow),
   inventory: __table({
     name: 'inventory',
     indexes: [
@@ -189,6 +236,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, InventoryToReviewRow),
+  model_accuracy: __table({
+    name: 'model_accuracy',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ModelAccuracyRow),
   my_employee: __table({
     name: 'my_employee',
     indexes: [

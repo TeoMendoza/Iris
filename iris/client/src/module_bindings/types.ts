@@ -10,43 +10,107 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AnalyticsOverview = __t.object("AnalyticsOverview", {
+  totalEmployees: __t.u32(),
+  pendingReview: __t.u32(),
+  get shelf() {
+    return ZoneStat;
+  },
+  get storage() {
+    return ZoneStat;
+  },
+  get sold() {
+    return ZoneStat;
+  },
+});
+export type AnalyticsOverview = __Infer<typeof AnalyticsOverview>;
+
 // The tagged union or sum type for the algebraic type `Category`.
 export const Category = __t.enum("Category", {
-  Shirts: __t.unit(),
-  Pants: __t.unit(),
+  Clothing: __t.unit(),
+  Footwear: __t.unit(),
+  Electronics: __t.unit(),
+  Furniture: __t.unit(),
+  Food: __t.unit(),
+  Books: __t.unit(),
+  Tools: __t.unit(),
+  Toys: __t.unit(),
+  Misc: __t.unit(),
 });
 export type Category = __Infer<typeof Category>;
 
-// The tagged union or sum type for the algebraic type `Color`.
-export const Color = __t.enum("Color", {
-  Red: __t.unit(),
-  Blue: __t.unit(),
+export const CategoryBreakdown = __t.object("CategoryBreakdown", {
+  get clothing() {
+    return CategoryDetail;
+  },
+  get footwear() {
+    return CategoryDetail;
+  },
+  get electronics() {
+    return CategoryDetail;
+  },
+  get furniture() {
+    return CategoryDetail;
+  },
+  get food() {
+    return CategoryDetail;
+  },
+  get books() {
+    return CategoryDetail;
+  },
+  get tools() {
+    return CategoryDetail;
+  },
+  get toys() {
+    return CategoryDetail;
+  },
+  get misc() {
+    return CategoryDetail;
+  },
 });
-export type Color = __Infer<typeof Color>;
+export type CategoryBreakdown = __Infer<typeof CategoryBreakdown>;
+
+export const CategoryDetail = __t.object("CategoryDetail", {
+  count: __t.u32(),
+  totalValue: __t.f64(),
+  valuePct: __t.f64(),
+});
+export type CategoryDetail = __Infer<typeof CategoryDetail>;
 
 export const Company = __t.object("Company", {
   id: __t.u64(),
-  name: __t.string(),
   code: __t.string(),
   visionKey: __t.string(),
+  name: __t.string(),
 });
 export type Company = __Infer<typeof Company>;
 
-// The tagged union or sum type for the algebraic type `Demographic`.
-export const Demographic = __t.enum("Demographic", {
-  Mens: __t.unit(),
-  Womens: __t.unit(),
+// The tagged union or sum type for the algebraic type `Condition`.
+export const Condition = __t.enum("Condition", {
+  New: __t.unit(),
+  LikeNew: __t.unit(),
+  Good: __t.unit(),
+  Fair: __t.unit(),
+  Poor: __t.unit(),
 });
-export type Demographic = __Infer<typeof Demographic>;
+export type Condition = __Infer<typeof Condition>;
 
 export const Employee = __t.object("Employee", {
   id: __t.identity(),
+  companyId: __t.u64(),
 });
 export type Employee = __Infer<typeof Employee>;
+
+export const EmployeeStat = __t.object("EmployeeStat", {
+  name: __t.string(),
+  itemsHandled: __t.u32(),
+});
+export type EmployeeStat = __Infer<typeof EmployeeStat>;
 
 export const InventoryItem = __t.object("InventoryItem", {
   id: __t.u64(),
   itemInformationId: __t.u64(),
+  companyId: __t.u64(),
   imageBytes: __t.byteArray(),
   get status() {
     return Status;
@@ -58,46 +122,51 @@ export type InventoryItem = __Infer<typeof InventoryItem>;
 export const ItemClassification = __t.object("ItemClassification", {
   id: __t.u64(),
   itemInformationId: __t.u64(),
+  companyId: __t.u64(),
   get predictedCategory() {
     return Category;
   },
-  get predictedColor() {
-    return Color;
+  get predictedCondition() {
+    return Condition;
   },
-  get predictedDemographic() {
-    return Demographic;
-  },
+  predictedPrice: __t.f64(),
 });
 export type ItemClassification = __Infer<typeof ItemClassification>;
 
 export const ItemInformation = __t.object("ItemInformation", {
   id: __t.u64(),
   processedImageId: __t.u64(),
+  companyId: __t.u64(),
+  confirmedBy: __t.identity(),
   imageBytes: __t.byteArray(),
   get category() {
     return Category;
   },
-  get color() {
-    return Color;
+  get condition() {
+    return Condition;
   },
-  get demographic() {
-    return Demographic;
-  },
+  estimatedPrice: __t.f64(),
 });
 export type ItemInformation = __Infer<typeof ItemInformation>;
 
+export const ModelAccuracy = __t.object("ModelAccuracy", {
+  totalClassified: __t.u32(),
+  categoryAccuracyPct: __t.f64(),
+  avgPriceDeltaPct: __t.f64(),
+});
+export type ModelAccuracy = __Infer<typeof ModelAccuracy>;
+
 export const ProcessedImage = __t.object("ProcessedImage", {
   id: __t.u64(),
+  companyId: __t.u64(),
   imageBytes: __t.byteArray(),
   get predictedCategory() {
     return Category;
   },
-  get predictedColor() {
-    return Color;
+  get predictedCondition() {
+    return Condition;
   },
-  get predictedDemographic() {
-    return Demographic;
-  },
+  predictedPrice: __t.f64(),
 });
 export type ProcessedImage = __Infer<typeof ProcessedImage>;
 
@@ -134,4 +203,13 @@ export const VisionClient = __t.object("VisionClient", {
   identity: __t.identity(),
 });
 export type VisionClient = __Infer<typeof VisionClient>;
+
+export const ZoneStat = __t.object("ZoneStat", {
+  count: __t.u32(),
+  value: __t.f64(),
+  get topCategories() {
+    return __t.array(Category);
+  },
+});
+export type ZoneStat = __Infer<typeof ZoneStat>;
 

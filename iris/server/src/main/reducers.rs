@@ -32,8 +32,8 @@ pub fn join_company(ctx: &ReducerContext, code: String) -> Result<(), String> {
     if ctx.db.employee().id().find(ctx.sender()).is_some() {
         return Err("Already in company".to_string());
     }
-    ctx.db.company().code().find(&code.to_lowercase()).ok_or("Invalid code")?;
-    ctx.db.employee().insert(Employee { id: ctx.sender() });
+    let company = ctx.db.company().code().find(&code.to_lowercase()).ok_or("Invalid code")?;
+    ctx.db.employee().insert(Employee { id: ctx.sender(), company_id: company.id });
     Ok(())
 }
 
@@ -44,8 +44,8 @@ pub fn register_vision_client(ctx: &ReducerContext, key: String) -> Result<(), S
         return Err("Invalid key".to_string());
     }
 
-    if ctx.db.vision_client().iter().next().is_some() {
-        return Err("Vision client already registered".to_string());
+    if let Some(existing) = ctx.db.vision_client().iter().next() {
+        ctx.db.vision_client().identity().delete(&existing.identity);
     }
 
     ctx.db.vision_client().insert(VisionClient { identity: ctx.sender() });
@@ -73,11 +73,12 @@ pub fn claim_images(ctx: &ReducerContext) -> Result<(), String> {
 }
 
 #[reducer]
-pub fn submit_processed_image(ctx: &ReducerContext, processing_id: u64, category: Category, color: Color, demographic: Demographic) -> Result<(), String> {
+pub fn submit_processed_image(ctx: &ReducerContext, processing_id: u64, category: Category, condition: Condition, price: f64) -> Result<(), String> {
     if ctx.db.vision_client().identity().find(ctx.sender()).is_none() {
         return Err("Unauthorized".to_string());
     }
 
+    let company = ctx.db.company().iter().next().ok_or("Company not found")?;
     let image = ctx.db.processing_image().id().find(processing_id).ok_or("Not found")?;
     if image.claimed_by != ctx.sender() {
         return Err("Unauthorized claim".to_string());
@@ -86,39 +87,45 @@ pub fn submit_processed_image(ctx: &ReducerContext, processing_id: u64, category
     ctx.db.processing_image().id().delete(&processing_id);
     ctx.db.processed_image().insert(ProcessedImage {
         id: 0,
+        company_id: company.id,
         image_bytes: image.image_bytes,
         predicted_category: category,
-        predicted_color: color,
-        predicted_demographic: demographic,
+        predicted_condition: condition,
+        predicted_price: price,
     });
     Ok(())
 }
 
 #[reducer]
-pub fn confirm_processed_image(ctx: &ReducerContext, processed_image_id: u64, category: Category, color: Color, demographic: Demographic) -> Result<(), String> {
+pub fn confirm_processed_image(ctx: &ReducerContext, processed_image_id: u64, category: Category, condition: Condition, price: f64) -> Result<(), String> {
     ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
     let processed = ctx.db.processed_image().id().find(processed_image_id).ok_or("Not found")?;
+    let company_id = processed.company_id;
     let info = ctx.db.item_information().insert(ItemInformation {
         id: 0,
         processed_image_id,
+        company_id,
+        confirmed_by: ctx.sender(),
         image_bytes: processed.image_bytes.clone(),
         category,
-        color,
-        demographic,
+        condition,
+        estimated_price: price,
     });
     ctx.db.item_classification().insert(ItemClassification {
         id: 0,
         item_information_id: info.id,
+        company_id,
         predicted_category: processed.predicted_category,
-        predicted_color: processed.predicted_color,
-        predicted_demographic: processed.predicted_demographic,
+        predicted_condition: processed.predicted_condition,
+        predicted_price: processed.predicted_price,
     });
     ctx.db.inventory_item().insert(InventoryItem {
         id: 0,
         item_information_id: info.id,
+        company_id,
         image_bytes: processed.image_bytes,
         status: Status::Storage,
-        price: 25.0,
+        price,
     });
     ctx.db.processed_image().id().delete(&processed_image_id);
     Ok(())
@@ -129,9 +136,11 @@ pub fn update_inventory_item(ctx: &ReducerContext, item_id: u64, status: Status,
     ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
     let item = ctx.db.inventory_item().id().find(item_id).ok_or("Not found")?;
     ctx.db.inventory_item().id().update(InventoryItem { status, price, ..item });
+    if let Some(info) = ctx.db.item_information().id().find(&item.item_information_id) {
+        ctx.db.item_information().id().update(ItemInformation { estimated_price: price, ..info });
+    }
     Ok(())
 }
-
 
 #[reducer]
 pub fn upload_image(ctx: &ReducerContext, image_bytes: Vec<u8>) -> Result<(), String> {
@@ -142,4 +151,3 @@ pub fn upload_image(ctx: &ReducerContext, image_bytes: Vec<u8>) -> Result<(), St
     ctx.db.unprocessed_image().insert(UnprocessedImage { id: 0, image_bytes });
     Ok(())
 }
-

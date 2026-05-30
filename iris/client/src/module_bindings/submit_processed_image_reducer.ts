@@ -12,8 +12,7 @@ import {
 
 import {
   Category,
-  Color,
-  Demographic,
+  Condition,
 } from "./types";
 
 export default {
@@ -21,10 +20,8 @@ export default {
   get category() {
     return Category;
   },
-  get color() {
-    return Color;
+  get condition() {
+    return Condition;
   },
-  get demographic() {
-    return Demographic;
-  },
+  price: __t.f64(),
 };

@@ -11,22 +11,21 @@ import {
 } from "spacetimedb";
 import {
   Category,
-  Color,
-  Demographic,
+  Condition,
 } from "./types";
 
 
 export default __t.row({
   id: __t.u64().primaryKey(),
   processedImageId: __t.u64().name("processed_image_id"),
+  companyId: __t.u64().name("company_id"),
+  confirmedBy: __t.identity().name("confirmed_by"),
   imageBytes: __t.byteArray().name("image_bytes"),
   get category() {
     return Category;
   },
-  get color() {
-    return Color;
+  get condition() {
+    return Condition;
   },
-  get demographic() {
-    return Demographic;
-  },
+  estimatedPrice: __t.f64().name("estimated_price"),
 });

@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/Library/Frameworks/Python.framework/Versions/3.11/bin/python3
 import os
 import time
 import json
@@ -53,19 +53,27 @@ def _sql(query: str, token: str) -> list[dict]:
 # Token management
 # ---------------------------------------------------------------------------
 
-def load_token() -> str | None:
-    if TOKEN_FILE.exists():
-        return TOKEN_FILE.read_text().strip()
-    return None
+def load_stored() -> tuple[str, str] | None:
+    if not TOKEN_FILE.exists():
+        return None
+    try:
+        data = json.loads(TOKEN_FILE.read_text())
+        return data["token"], data["key"]
+    except Exception:
+        return None
 
 def save_token(token: str):
-    TOKEN_FILE.write_text(token)
+    TOKEN_FILE.write_text(json.dumps({"token": token, "key": VISION_KEY}))
 
 def acquire_token() -> str:
-    url = f"{SPACETIME_URL}/v1/database/{DB_NAME}/call/register_vision_client"
-    resp = requests.post(url, headers={"Content-Type": "application/json"}, json=[VISION_KEY])
-    resp.raise_for_status()
-    return resp.headers["spacetime-identity-token"]
+    r = requests.post(f"{SPACETIME_URL}/v1/identity")
+    r.raise_for_status()
+    token = r.json()["token"]
+
+    reg_url = f"{SPACETIME_URL}/v1/database/{DB_NAME}/call/register_vision_client"
+    reg_resp = requests.post(reg_url, headers=_headers(token), json=[VISION_KEY])
+    reg_resp.raise_for_status()
+    return token
 
 
 # ---------------------------------------------------------------------------
@@ -76,10 +84,10 @@ def claim_images(token: str):
     _call("claim_images", [], token)
 
 def _enum(variant: str) -> dict:
-    return {variant.lower(): []}
+    return {variant[0].lower() + variant[1:]: []}
 
-def submit_processed_image(token: str, processing_id: int, category: str, color: str, demographic: str):
-    _call("submit_processed_image", [processing_id, _enum(category), _enum(color), _enum(demographic)], token)
+def submit_processed_image(token: str, processing_id: int, category: str, condition: str, price: float):
+    _call("submit_processed_image", [processing_id, _enum(category), _enum(condition), price], token)
 
 
 # ---------------------------------------------------------------------------
@@ -95,20 +103,23 @@ def fetch_processing_images(token: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 VISION_PROMPT = """\
-Analyze this clothing item image and return a JSON object with exactly these fields:
+Analyze this image and classify the item(s) shown. Return a JSON object with exactly these fields:
 
 {
-  "category":    "<value>",
-  "color":       "<value>",
-  "demographic": "<value>"
+  "category":  "<value>",
+  "condition": "<value>",
+  "price":     <number>
 }
 
 Allowed values:
-  category:    "Shirts" | "Pants"
-  color:       "Red"    | "Blue"
-  demographic: "Mens"   | "Womens"
+  category:  "Clothing" | "Footwear" | "Electronics" | "Furniture" | "Food" | "Books" | "Tools" | "Toys" | "Misc"
+  condition: "New" | "LikeNew" | "Good" | "Fair" | "Poor"
+  price:     estimated resale value in USD as a number (e.g. 15.00)
 
-If unsure, simply choose a value from the provided options, even if you do not believe the item to be clothing. This is a testing phase to ensure the pipeline works.
+Guidelines:
+  - condition "New" means unopened/unused with tags; "LikeNew" means barely used; "Poor" means heavily worn or damaged
+  - price should reflect realistic second-hand/resale market value, not retail
+  - if the item type does not clearly fit a category, use "Misc"
 
 Return ONLY the JSON object, no explanation or markdown.
 """
@@ -128,7 +139,7 @@ def _detect_media_type(image_bytes: bytes) -> str:
         return "image/webp"
     return "image/jpeg"
 
-def run_vision_model(image_bytes: bytes) -> tuple[str, str, str]:
+def run_vision_model(image_bytes: bytes) -> tuple[str, str, float]:
     image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
     media_type = _detect_media_type(image_bytes)
 
@@ -152,7 +163,7 @@ def run_vision_model(image_bytes: bytes) -> tuple[str, str, str]:
         if text.startswith("json"):
             text = text[4:]
     result = json.loads(text.strip())
-    return result["category"], result["color"], result["demographic"]
+    return result["category"], result["condition"], float(result["price"])
 
 
 # ---------------------------------------------------------------------------
@@ -160,14 +171,20 @@ def run_vision_model(image_bytes: bytes) -> tuple[str, str, str]:
 # ---------------------------------------------------------------------------
 
 def main():
-    token = load_token()
+    stored = load_stored()
 
-    if token is None:
+    if stored is None:
         print("No token found — registering vision client...")
         token = acquire_token()
         save_token(token)
         print("Registered and token saved.")
+    elif stored[1] != VISION_KEY:
+        print("Vision key changed — re-registering...")
+        token = acquire_token()
+        save_token(token)
+        print("Re-registered and token updated.")
     else:
+        token = stored[0]
         print("Token loaded from file.")
 
     processing: list[dict] = []
@@ -190,10 +207,10 @@ def main():
             image_bytes = bytes.fromhex(raw) if isinstance(raw, str) else bytes(raw)
 
             print(f"Processing image {processing_id}...")
-            category, color, demographic = run_vision_model(image_bytes)
+            category, condition, price = run_vision_model(image_bytes)
 
-            submit_processed_image(token, processing_id, category, color, demographic)
-            print(f"Submitted image {processing_id}: {category}, {color}, {demographic}")
+            submit_processed_image(token, processing_id, category, condition, price)
+            print(f"Submitted image {processing_id}: {category}, {condition}, ${price:.2f}")
 
         processing = []
         time.sleep(POLL_INTERVAL)

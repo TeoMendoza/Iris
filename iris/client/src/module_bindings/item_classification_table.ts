@@ -11,21 +11,19 @@ import {
 } from "spacetimedb";
 import {
   Category,
-  Color,
-  Demographic,
+  Condition,
 } from "./types";
 
 
 export default __t.row({
   id: __t.u64().primaryKey(),
   itemInformationId: __t.u64().name("item_information_id"),
+  companyId: __t.u64().name("company_id"),
   get predictedCategory() {
     return Category.name("predicted_category");
   },
-  get predictedColor() {
-    return Color.name("predicted_color");
+  get predictedCondition() {
+    return Condition.name("predicted_condition");
   },
-  get predictedDemographic() {
-    return Demographic.name("predicted_demographic");
-  },
+  predictedPrice: __t.f64().name("predicted_price"),
 });
