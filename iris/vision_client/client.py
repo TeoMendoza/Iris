@@ -80,46 +80,66 @@ def acquire_token() -> str:
 # Reducers
 # ---------------------------------------------------------------------------
 
-def claim_images(token: str):
-    _call("claim_images", [], token)
+def claim_photos(token: str):
+    _call("claim_photos", [], token)
 
 def _enum(variant: str) -> dict:
     return {variant[0].lower() + variant[1:]: []}
 
-def submit_processed_image(token: str, processing_id: int, category: str, condition: str, price: float):
-    _call("submit_processed_image", [processing_id, _enum(category), _enum(condition), price], token)
+def submit_analysis(token: str, claimed_id: int, detections: list[dict]):
+    encoded = [
+        {
+            "category": _enum(d["category"]),
+            "count": d["count"],
+            "total_value": d["total_value"],
+        }
+        for d in detections
+    ]
+    _call("submit_analysis", [claimed_id, encoded], token)
 
 
 # ---------------------------------------------------------------------------
 # Table queries
 # ---------------------------------------------------------------------------
 
-def fetch_processing_images(token: str) -> list[dict]:
-    return _sql("SELECT * FROM processing_image", token)
+def fetch_claimed_photos(token: str) -> list[dict]:
+    return _sql("SELECT * FROM claimed_photo", token)
 
 
 # ---------------------------------------------------------------------------
-# Vision prompt — edit here
+# Vision prompt
 # ---------------------------------------------------------------------------
 
 VISION_PROMPT = """\
-Analyze this image and classify the item(s) shown. Return a JSON object with exactly these fields:
+You are an AI assistant for an inventory management system at a resale or thrift store. \
+Your job is to analyze a photo of items and identify every distinct category of item present.
+
+A single photo may contain items from multiple categories (e.g., books AND electronics). \
+For each category you identify, count how many individual items belong to it and estimate their total resale value.
+
+Return a JSON object with exactly this structure:
 
 {
-  "category":  "<value>",
-  "condition": "<value>",
-  "price":     <number>
+  "detections": [
+    {
+      "category": "<value>",
+      "count": <integer>,
+      "total_value": <number>
+    }
+  ]
 }
 
-Allowed values:
-  category:  "Clothing" | "Footwear" | "Electronics" | "Furniture" | "Food" | "Books" | "Tools" | "Toys" | "Misc"
-  condition: "New" | "LikeNew" | "Good" | "Fair" | "Poor"
-  price:     estimated resale value in USD as a number (e.g. 15.00)
+Allowed categories:
+  "Clothing" | "Footwear" | "Electronics" | "Furniture" | "Food" | "Books" | "Tools" | "Toys" | "Misc"
 
 Guidelines:
-  - condition "New" means unopened/unused with tags; "LikeNew" means barely used; "Poor" means heavily worn or damaged
-  - price should reflect realistic second-hand/resale market value, not retail
-  - if the item type does not clearly fit a category, use "Misc"
+  - One detection entry per category — do not split a category across multiple entries
+  - count: the number of individual items of that category visible in the photo
+  - total_value: the combined estimated resale/second-hand market value in USD for all items in that group
+  - Use realistic second-hand pricing, not retail
+  - If items from a category are partially visible or clearly present, include them
+  - If items do not clearly fit any category, use "Misc"
+  - If only one category is present, the detections array will have a single entry
 
 Return ONLY the JSON object, no explanation or markdown.
 """
@@ -139,13 +159,13 @@ def _detect_media_type(image_bytes: bytes) -> str:
         return "image/webp"
     return "image/jpeg"
 
-def run_vision_model(image_bytes: bytes) -> tuple[str, str, float]:
+def run_vision_model(image_bytes: bytes) -> list[dict]:
     image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
     media_type = _detect_media_type(image_bytes)
 
     message = _anthropic.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=256,
+        max_tokens=512,
         messages=[
             {
                 "role": "user",
@@ -163,7 +183,7 @@ def run_vision_model(image_bytes: bytes) -> tuple[str, str, float]:
         if text.startswith("json"):
             text = text[4:]
     result = json.loads(text.strip())
-    return result["category"], result["condition"], float(result["price"])
+    return result["detections"]
 
 
 # ---------------------------------------------------------------------------
@@ -191,26 +211,27 @@ def main():
 
     while True:
         if not processing:
-            print("No images in progress — claiming batch...")
-            claim_images(token)
-            processing = fetch_processing_images(token)
-            print(f"Claimed {len(processing)} images.")
+            print("No photos in progress — claiming batch...")
+            claim_photos(token)
+            processing = fetch_claimed_photos(token)
+            print(f"Claimed {len(processing)} photos.")
 
         if not processing:
-            print(f"No unprocessed images available. Waiting {POLL_INTERVAL}s...")
+            print(f"No pending photos available. Waiting {POLL_INTERVAL}s...")
             time.sleep(POLL_INTERVAL)
             continue
 
         for row in processing:
-            processing_id = row["id"]
+            claimed_id = row["id"]
             raw = row["image_bytes"]
             image_bytes = bytes.fromhex(raw) if isinstance(raw, str) else bytes(raw)
 
-            print(f"Processing image {processing_id}...")
-            category, condition, price = run_vision_model(image_bytes)
+            print(f"Analyzing photo {claimed_id}...")
+            detections = run_vision_model(image_bytes)
 
-            submit_processed_image(token, processing_id, category, condition, price)
-            print(f"Submitted image {processing_id}: {category}, {condition}, ${price:.2f}")
+            submit_analysis(token, claimed_id, detections)
+            summary = ", ".join(f"{d['count']}x {d['category']} (${d['total_value']:.2f})" for d in detections)
+            print(f"Submitted photo {claimed_id}: {summary}")
 
         processing = []
         time.sleep(POLL_INTERVAL)

@@ -9,21 +9,17 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
+
 import {
   Category,
-  Condition,
 } from "./types";
 
-
-export default __t.row({
-  id: __t.u64().primaryKey(),
-  companyId: __t.u64().name("company_id"),
-  imageBytes: __t.byteArray().name("image_bytes"),
-  get predictedCategory() {
-    return Category.name("predicted_category");
+export default {
+  reviewItemId: __t.u64(),
+  get category() {
+    return Category;
   },
-  get predictedCondition() {
-    return Condition.name("predicted_condition");
-  },
-  predictedPrice: __t.f64().name("predicted_price"),
-});
+  count: __t.u32(),
+  totalValue: __t.f64(),
+  useAsCategoryPhoto: __t.bool(),
+};

@@ -11,13 +11,19 @@ import {
 } from "spacetimedb";
 
 import {
+  Category,
   Status,
 } from "./types";
 
 export default {
-  itemId: __t.u64(),
-  get status() {
+  get category() {
+    return Category;
+  },
+  get fromStatus() {
     return Status;
   },
-  price: __t.f64(),
+  get toStatus() {
+    return Status;
+  },
+  count: __t.u32(),
 };

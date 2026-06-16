@@ -1,5 +1,4 @@
 use spacetimedb::{Identity, SpacetimeType, Timestamp, table};
-use crate::*;
 
 #[table(accessor = company, public)]
 pub struct Company {
@@ -27,64 +26,71 @@ pub struct VisionClient {
     #[primary_key] pub identity: Identity,
 }
 
-#[table(accessor = unprocessed_image, public)]
-pub struct UnprocessedImage {
+#[table(accessor = pending_photo, public)]
+pub struct PendingPhoto {
     #[primary_key] #[auto_inc] pub id: u64,
     pub image_bytes: Vec<u8>,
 }
 
-#[table(accessor = processing_image, public)]
-pub struct ProcessingImage {
+#[table(accessor = claimed_photo, public)]
+pub struct ClaimedPhoto {
     #[primary_key] #[auto_inc] pub id: u64,
     pub image_bytes: Vec<u8>,
     pub claimed_at: Timestamp,
     pub claimed_by: Identity,
 }
 
-#[table(accessor = processed_image, public, index(accessor = processed_by_company, btree(columns = [company_id])))]
-pub struct ProcessedImage {
+#[table(accessor = review_item, public, index(accessor = review_items_by_company, btree(columns = [company_id])))]
+pub struct ReviewItem {
     #[primary_key] #[auto_inc] pub id: u64,
+    pub scan_id: u64,
     pub company_id: u64,
     pub image_bytes: Vec<u8>,
     pub predicted_category: Category,
-    pub predicted_condition: Condition,
-    pub predicted_price: f64,
+    pub predicted_count: u32,
+    pub predicted_total_value: f64,
 }
 
-#[table(accessor = item_information, public,
-    index(accessor = item_info_by_company, btree(columns = [company_id])),
-    index(accessor = item_info_by_confirmer, btree(columns = [confirmed_by])))]
-pub struct ItemInformation {
+#[table(accessor = inventory_category, public, index(accessor = inv_categories_by_company, btree(columns = [company_id])))]
+pub struct InventoryCategory {
     #[primary_key] #[auto_inc] pub id: u64,
-    pub processed_image_id: u64,
     pub company_id: u64,
-    pub confirmed_by: Identity,
-    pub image_bytes: Vec<u8>,
+    #[unique] pub category: Category,
+    pub shelf_count: u32,
+    pub storage_count: u32,
+    pub sold_count: u32,
+    pub total_value: f64,
+    pub category_image_bytes: Vec<u8>,
+}
+
+#[table(accessor = stock_entry, public,
+    index(accessor = stock_entries_by_company, btree(columns = [company_id])),
+    index(accessor = stock_entries_by_confirmer, btree(columns = [confirmed_by])))]
+pub struct StockEntry {
+    #[primary_key] #[auto_inc] pub id: u64,
+    pub company_id: u64,
     pub category: Category,
-    pub condition: Condition,
-    pub estimated_price: f64,
+    pub items_added: u32,
+    pub value_at_scan: f64,
+    pub scanned_at: Timestamp,
+    pub confirmed_by: Identity,
 }
 
-#[table(accessor = item_classification, public, index(accessor = item_class_by_company, btree(columns = [company_id])))]
-pub struct ItemClassification {
+#[table(accessor = prediction_log,
+    index(accessor = prediction_logs_by_company, btree(columns = [company_id])))]
+pub struct PredictionLog {
     #[primary_key] #[auto_inc] pub id: u64,
-    #[unique] pub item_information_id: u64,
     pub company_id: u64,
     pub predicted_category: Category,
-    pub predicted_condition: Condition,
-    pub predicted_price: f64,
+    pub predicted_count: u32,
+    pub predicted_total_value: f64,
+    pub confirmed_category: Category,
+    pub confirmed_count: u32,
+    pub confirmed_total_value: f64,
+    pub was_rejected: bool,
 }
 
-#[table(accessor = inventory_item, public, index(accessor = inventory_by_company, btree(columns = [company_id])))]
-pub struct InventoryItem {
-    #[primary_key] #[auto_inc] pub id: u64,
-    #[unique] pub item_information_id: u64,
-    pub company_id: u64,
-    pub image_bytes: Vec<u8>,
-    pub status: Status,
-    pub price: f64,
-}
-
+// ── Enums ──────────────────────────────────────────────────
 
 #[derive(SpacetimeType, Clone, PartialEq)]
 pub enum Category {
@@ -99,44 +105,43 @@ pub enum Category {
     Misc,
 }
 
-#[derive(SpacetimeType, Clone)]
-pub enum Condition {
-    New,
-    LikeNew,
-    Good,
-    Fair,
-    Poor,
-}
-
-#[derive(SpacetimeType, Clone)]
+#[derive(SpacetimeType, Clone, PartialEq)]
 pub enum Status {
     Sold,
     Shelf,
     Storage,
 }
 
-// ── Analytics types ──────────────────────────────────────
-
-#[derive(SpacetimeType)]
-pub struct ZoneStat {
+#[derive(SpacetimeType, Clone)]
+pub struct DetectionInput {
+    pub category: Category,
     pub count: u32,
-    pub value: f64,
-    pub top_categories: Vec<Category>,
+    pub total_value: f64,
 }
+
+// ── Analytics types ────────────────────────────────────────
 
 #[derive(SpacetimeType)]
 pub struct AnalyticsOverview {
     pub total_employees: u32,
     pub pending_review: u32,
-    pub shelf: ZoneStat,
-    pub storage: ZoneStat,
-    pub sold: ZoneStat,
+    pub active_categories: u32,
+    pub shelf_count: u32,
+    pub storage_count: u32,
+    pub sold_count: u32,
+    pub shelf_value: f64,
+    pub storage_value: f64,
+    pub sold_value: f64,
 }
 
 #[derive(SpacetimeType)]
 pub struct CategoryDetail {
-    pub count: u32,
+    pub shelf_count: u32,
+    pub storage_count: u32,
+    pub sold_count: u32,
     pub total_value: f64,
+    pub avg_item_value: f64,
+    pub sell_through_rate: f64,
     pub value_pct: f64,
 }
 
@@ -155,9 +160,11 @@ pub struct CategoryBreakdown {
 
 #[derive(SpacetimeType)]
 pub struct ModelAccuracy {
-    pub total_classified: u32,
+    pub total_processed: u32,
+    pub rejection_rate_pct: f64,
     pub category_accuracy_pct: f64,
-    pub avg_price_delta_pct: f64,
+    pub avg_count_delta_pct: f64,
+    pub avg_value_delta_pct: f64,
 }
 
 #[derive(SpacetimeType)]

@@ -9,21 +9,15 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
-import {
-  ZoneStat,
-} from "./types";
-
 
 export default __t.row({
   totalEmployees: __t.u32().name("total_employees"),
   pendingReview: __t.u32().name("pending_review"),
-  get shelf() {
-    return ZoneStat;
-  },
-  get storage() {
-    return ZoneStat;
-  },
-  get sold() {
-    return ZoneStat;
-  },
+  activeCategories: __t.u32().name("active_categories"),
+  shelfCount: __t.u32().name("shelf_count"),
+  storageCount: __t.u32().name("storage_count"),
+  soldCount: __t.u32().name("sold_count"),
+  shelfValue: __t.f64().name("shelf_value"),
+  storageValue: __t.f64().name("storage_value"),
+  soldValue: __t.f64().name("sold_value"),
 });

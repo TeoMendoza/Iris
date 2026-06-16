@@ -6,21 +6,23 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
-import ClaimImagesReducer from "../claim_images_reducer";
-import ConfirmProcessedImageReducer from "../confirm_processed_image_reducer";
+import ApproveReviewItemReducer from "../approve_review_item_reducer";
+import ClaimPhotosReducer from "../claim_photos_reducer";
 import CreateUserReducer from "../create_user_reducer";
 import JoinCompanyReducer from "../join_company_reducer";
+import MoveStockReducer from "../move_stock_reducer";
 import RegisterVisionClientReducer from "../register_vision_client_reducer";
-import SubmitProcessedImageReducer from "../submit_processed_image_reducer";
-import UpdateInventoryItemReducer from "../update_inventory_item_reducer";
-import UploadImageReducer from "../upload_image_reducer";
+import RejectReviewItemReducer from "../reject_review_item_reducer";
+import SubmitAnalysisReducer from "../submit_analysis_reducer";
+import UploadPhotoReducer from "../upload_photo_reducer";
 
-export type ClaimImagesParams = __Infer<typeof ClaimImagesReducer>;
-export type ConfirmProcessedImageParams = __Infer<typeof ConfirmProcessedImageReducer>;
+export type ApproveReviewItemParams = __Infer<typeof ApproveReviewItemReducer>;
+export type ClaimPhotosParams = __Infer<typeof ClaimPhotosReducer>;
 export type CreateUserParams = __Infer<typeof CreateUserReducer>;
 export type JoinCompanyParams = __Infer<typeof JoinCompanyReducer>;
+export type MoveStockParams = __Infer<typeof MoveStockReducer>;
 export type RegisterVisionClientParams = __Infer<typeof RegisterVisionClientReducer>;
-export type SubmitProcessedImageParams = __Infer<typeof SubmitProcessedImageReducer>;
-export type UpdateInventoryItemParams = __Infer<typeof UpdateInventoryItemReducer>;
-export type UploadImageParams = __Infer<typeof UploadImageReducer>;
+export type RejectReviewItemParams = __Infer<typeof RejectReviewItemReducer>;
+export type SubmitAnalysisParams = __Infer<typeof SubmitAnalysisReducer>;
+export type UploadPhotoParams = __Infer<typeof UploadPhotoReducer>;
 

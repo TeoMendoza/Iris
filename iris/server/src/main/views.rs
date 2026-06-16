@@ -13,24 +13,32 @@ fn my_employee(ctx: &ViewContext) -> impl Query<Employee> {
     ctx.from.employee().r#where(move |e| e.id.eq(sender))
 }
 
-#[view(accessor = inventory_to_review, public)]
-fn review_queue(ctx: &ViewContext) -> impl Query<ProcessedImage> {
-    let empty = ctx.from.processed_image().r#where(|p| p.id.eq(u64::MAX));
+#[view(accessor = review_queue, public)]
+fn review_queue(ctx: &ViewContext) -> impl Query<ReviewItem> {
+    let empty = ctx.from.review_item().r#where(|r| r.id.eq(u64::MAX));
     match ctx.db.employee().id().find(ctx.sender()) {
-        Some(_) => ctx.from.processed_image().r#where(|p| p.id.ne(0_u64)),
+        Some(_) => ctx.from.review_item().r#where(|r| r.id.ne(0_u64)),
         None => empty,
     }
 }
 
-#[view(accessor = inventory, public)]
-fn inventory(ctx: &ViewContext) -> impl Query<InventoryItem> {
-    let empty = ctx.from.inventory_item().r#where(|i| i.id.eq(u64::MAX));
+#[view(accessor = inventory_categories, public)]
+fn inventory_categories_view(ctx: &ViewContext) -> impl Query<InventoryCategory> {
+    let empty = ctx.from.inventory_category().r#where(|c| c.id.eq(u64::MAX));
     match ctx.db.employee().id().find(ctx.sender()) {
-        Some(_) => ctx.from.inventory_item().r#where(|i| i.id.ne(0_u64)),
+        Some(_) => ctx.from.inventory_category().r#where(|c| c.id.ne(0_u64)),
         None => empty,
     }
 }
 
+#[view(accessor = stock_entries, public)]
+fn stock_entries_view(ctx: &ViewContext) -> impl Query<StockEntry> {
+    let empty = ctx.from.stock_entry().r#where(|s| s.id.eq(u64::MAX));
+    match ctx.db.employee().id().find(ctx.sender()) {
+        Some(_) => ctx.from.stock_entry().r#where(|s| s.id.ne(0_u64)),
+        None => empty,
+    }
+}
 
 // ── Category helpers ──────────────────────────────────────
 
@@ -48,26 +56,6 @@ fn category_index(cat: &Category) -> usize {
     }
 }
 
-fn category_from_index(i: usize) -> Category {
-    match i {
-        0 => Category::Clothing,
-        1 => Category::Footwear,
-        2 => Category::Electronics,
-        3 => Category::Furniture,
-        4 => Category::Food,
-        5 => Category::Books,
-        6 => Category::Tools,
-        7 => Category::Toys,
-        _ => Category::Misc,
-    }
-}
-
-fn top_categories(counts: &[u32; 9]) -> Vec<Category> {
-    let mut indexed: Vec<(usize, u32)> = counts.iter().enumerate().map(|(i, &c)| (i, c)).collect();
-    indexed.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-    indexed.into_iter().filter(|(_, c)| *c > 0).take(3).map(|(i, _)| category_from_index(i)).collect()
-}
-
 // ── Analytics views ───────────────────────────────────────
 
 #[view(accessor = analytics_overview, public)]
@@ -75,32 +63,39 @@ fn analytics_overview(ctx: &ViewContext) -> Option<AnalyticsOverview> {
     let company = ctx.db.company().id().find(&1u64)?;
 
     let total_employees = ctx.db.employee().company_employees().filter(&company.id).count() as u32;
-    let pending_review = ctx.db.processed_image().processed_by_company().filter(&company.id).count() as u32;
+    let pending_review = ctx.db.review_item().review_items_by_company().filter(&company.id).count() as u32;
 
-    let mut shelf_counts = [0u32; 9];
-    let mut storage_counts = [0u32; 9];
-    let mut sold_counts = [0u32; 9];
-    let mut shelf_value = 0.0f64;
+    let mut shelf_count   = 0u32;
+    let mut storage_count = 0u32;
+    let mut sold_count    = 0u32;
+    let mut shelf_value   = 0.0f64;
     let mut storage_value = 0.0f64;
-    let mut sold_value = 0.0f64;
+    let mut sold_value    = 0.0f64;
+    let mut active_categories = 0u32;
 
-    for item in ctx.db.inventory_item().inventory_by_company().filter(&company.id) {
-        if let Some(info) = ctx.db.item_information().id().find(&item.item_information_id) {
-            let idx = category_index(&info.category);
-            match item.status {
-                Status::Shelf   => { shelf_counts[idx]   += 1; shelf_value   += item.price; }
-                Status::Storage => { storage_counts[idx] += 1; storage_value += item.price; }
-                Status::Sold    => { sold_counts[idx]    += 1; sold_value    += item.price; }
-            }
-        }
+    for cat in ctx.db.inventory_category().inv_categories_by_company().filter(&company.id) {
+        let total = cat.shelf_count + cat.storage_count + cat.sold_count;
+        if total == 0 { continue; }
+        active_categories += 1;
+        let avg = cat.total_value / total as f64;
+        shelf_count   += cat.shelf_count;
+        storage_count += cat.storage_count;
+        sold_count    += cat.sold_count;
+        shelf_value   += avg * cat.shelf_count as f64;
+        storage_value += avg * cat.storage_count as f64;
+        sold_value    += avg * cat.sold_count as f64;
     }
 
     Some(AnalyticsOverview {
         total_employees,
         pending_review,
-        shelf:   ZoneStat { count: shelf_counts.iter().sum(),   value: shelf_value,   top_categories: top_categories(&shelf_counts) },
-        storage: ZoneStat { count: storage_counts.iter().sum(), value: storage_value, top_categories: top_categories(&storage_counts) },
-        sold:    ZoneStat { count: sold_counts.iter().sum(),    value: sold_value,    top_categories: top_categories(&sold_counts) },
+        active_categories,
+        shelf_count,
+        storage_count,
+        sold_count,
+        shelf_value,
+        storage_value,
+        sold_value,
     })
 }
 
@@ -108,23 +103,38 @@ fn analytics_overview(ctx: &ViewContext) -> Option<AnalyticsOverview> {
 fn category_breakdown(ctx: &ViewContext) -> Option<CategoryBreakdown> {
     let company = ctx.db.company().id().find(&1u64)?;
 
-    let mut cat_counts = [0u32; 9];
-    let mut cat_values = [0.0f64; 9];
-    let mut total_value = 0.0f64;
+    let mut cat_shelf   = [0u32; 9];
+    let mut cat_storage = [0u32; 9];
+    let mut cat_sold    = [0u32; 9];
+    let mut cat_values  = [0.0f64; 9];
+    let mut total_active_value = 0.0f64;
 
-    for item in ctx.db.inventory_item().inventory_by_company().filter(&company.id) {
-        if let Some(info) = ctx.db.item_information().id().find(&item.item_information_id) {
-            let idx = category_index(&info.category);
-            cat_counts[idx] += 1;
-            cat_values[idx] += item.price;
-            total_value += item.price;
-        }
+    for cat in ctx.db.inventory_category().inv_categories_by_company().filter(&company.id) {
+        let idx = category_index(&cat.category);
+        let total = cat.shelf_count + cat.storage_count + cat.sold_count;
+        let avg = if total > 0 { cat.total_value / total as f64 } else { 0.0 };
+        cat_shelf[idx]   = cat.shelf_count;
+        cat_storage[idx] = cat.storage_count;
+        cat_sold[idx]    = cat.sold_count;
+        cat_values[idx]  = cat.total_value;
+        total_active_value += avg * (cat.shelf_count + cat.storage_count) as f64;
     }
 
-    let detail = |i: usize| CategoryDetail {
-        count: cat_counts[i],
-        total_value: cat_values[i],
-        value_pct: if total_value > 0.0 { cat_values[i] / total_value * 100.0 } else { 0.0 },
+    let detail = |i: usize| {
+        let total = cat_shelf[i] + cat_storage[i] + cat_sold[i];
+        let avg = if total > 0 { cat_values[i] / total as f64 } else { 0.0 };
+        let active_value = avg * (cat_shelf[i] + cat_storage[i]) as f64;
+        let sell_through = if total > 0 { cat_sold[i] as f64 / total as f64 * 100.0 } else { 0.0 };
+        let value_pct = if total_active_value > 0.0 { active_value / total_active_value * 100.0 } else { 0.0 };
+        CategoryDetail {
+            shelf_count: cat_shelf[i],
+            storage_count: cat_storage[i],
+            sold_count: cat_sold[i],
+            total_value: cat_values[i],
+            avg_item_value: avg,
+            sell_through_rate: sell_through,
+            value_pct,
+        }
     };
 
     Some(CategoryBreakdown {
@@ -144,27 +154,39 @@ fn category_breakdown(ctx: &ViewContext) -> Option<CategoryBreakdown> {
 fn model_accuracy(ctx: &ViewContext) -> Option<ModelAccuracy> {
     let company = ctx.db.company().id().find(&1u64)?;
 
-    let mut total = 0u32;
-    let mut category_matches = 0u32;
-    let mut price_delta_pct_sum = 0.0f64;
+    let mut total      = 0u32;
+    let mut rejected   = 0u32;
+    let mut cat_matches = 0u32;
+    let mut count_delta_sum = 0.0f64;
+    let mut value_delta_sum = 0.0f64;
+    let mut approved   = 0u32;
 
-    for classification in ctx.db.item_classification().item_class_by_company().filter(&company.id) {
-        if let Some(info) = ctx.db.item_information().id().find(&classification.item_information_id) {
-            total += 1;
-            if classification.predicted_category == info.category {
-                category_matches += 1;
-            }
-            if info.estimated_price > 0.0 {
-                price_delta_pct_sum += (classification.predicted_price - info.estimated_price).abs()
-                    / info.estimated_price * 100.0;
-            }
+    for log in ctx.db.prediction_log().prediction_logs_by_company().filter(&company.id) {
+        total += 1;
+        if log.was_rejected {
+            rejected += 1;
+            continue;
+        }
+        approved += 1;
+        if log.predicted_category == log.confirmed_category {
+            cat_matches += 1;
+        }
+        if log.confirmed_count > 0 {
+            count_delta_sum += (log.predicted_count as f64 - log.confirmed_count as f64).abs()
+                / log.confirmed_count as f64 * 100.0;
+        }
+        if log.confirmed_total_value > 0.0 {
+            value_delta_sum += (log.predicted_total_value - log.confirmed_total_value).abs()
+                / log.confirmed_total_value * 100.0;
         }
     }
 
     Some(ModelAccuracy {
-        total_classified: total,
-        category_accuracy_pct: if total > 0 { category_matches as f64 / total as f64 * 100.0 } else { 0.0 },
-        avg_price_delta_pct: if total > 0 { price_delta_pct_sum / total as f64 } else { 0.0 },
+        total_processed: total,
+        rejection_rate_pct: if total > 0 { rejected as f64 / total as f64 * 100.0 } else { 0.0 },
+        category_accuracy_pct: if approved > 0 { cat_matches as f64 / approved as f64 * 100.0 } else { 0.0 },
+        avg_count_delta_pct: if approved > 0 { count_delta_sum / approved as f64 } else { 0.0 },
+        avg_value_delta_pct: if approved > 0 { value_delta_sum / approved as f64 } else { 0.0 },
     })
 }
 
@@ -174,7 +196,7 @@ fn employee_stats(ctx: &ViewContext) -> Vec<EmployeeStat> {
 
     let mut stats: Vec<EmployeeStat> = ctx.db.employee().company_employees().filter(&company.id).map(|emp| {
         let name = ctx.db.user().id().find(&emp.id).map(|u| u.name).unwrap_or_else(|| "Unknown".to_string());
-        let items_handled = ctx.db.item_information().item_info_by_confirmer().filter(&emp.id).count() as u32;
+        let items_handled = ctx.db.stock_entry().stock_entries_by_confirmer().filter(&emp.id).count() as u32;
         EmployeeStat { name, items_handled }
     }).collect();
 

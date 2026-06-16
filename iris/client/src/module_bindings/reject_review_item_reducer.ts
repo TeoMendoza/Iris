@@ -10,18 +10,6 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import {
-  Category,
-  Condition,
-} from "./types";
-
 export default {
-  processedImageId: __t.u64(),
-  get category() {
-    return Category;
-  },
-  get condition() {
-    return Condition;
-  },
-  price: __t.f64(),
+  reviewItemId: __t.u64(),
 };

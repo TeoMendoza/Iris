@@ -9,18 +9,14 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
+
 import {
-  Status,
+  DetectionInput,
 } from "./types";
 
-
-export default __t.row({
-  id: __t.u64().primaryKey(),
-  itemInformationId: __t.u64().name("item_information_id"),
-  companyId: __t.u64().name("company_id"),
-  imageBytes: __t.byteArray().name("image_bytes"),
-  get status() {
-    return Status;
+export default {
+  claimedId: __t.u64(),
+  get detections() {
+    return __t.array(DetectionInput);
   },
-  price: __t.f64(),
-});
+};

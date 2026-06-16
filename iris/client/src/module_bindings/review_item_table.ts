@@ -11,21 +11,17 @@ import {
 } from "spacetimedb";
 import {
   Category,
-  Condition,
 } from "./types";
 
 
 export default __t.row({
   id: __t.u64().primaryKey(),
-  processedImageId: __t.u64().name("processed_image_id"),
+  scanId: __t.u64().name("scan_id"),
   companyId: __t.u64().name("company_id"),
-  confirmedBy: __t.identity().name("confirmed_by"),
   imageBytes: __t.byteArray().name("image_bytes"),
-  get category() {
-    return Category;
+  get predictedCategory() {
+    return Category.name("predicted_category");
   },
-  get condition() {
-    return Condition;
-  },
-  estimatedPrice: __t.f64().name("estimated_price"),
+  predictedCount: __t.u32().name("predicted_count"),
+  predictedTotalValue: __t.f64().name("predicted_total_value"),
 });

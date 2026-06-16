@@ -13,15 +13,13 @@ import {
 export const AnalyticsOverview = __t.object("AnalyticsOverview", {
   totalEmployees: __t.u32(),
   pendingReview: __t.u32(),
-  get shelf() {
-    return ZoneStat;
-  },
-  get storage() {
-    return ZoneStat;
-  },
-  get sold() {
-    return ZoneStat;
-  },
+  activeCategories: __t.u32(),
+  shelfCount: __t.u32(),
+  storageCount: __t.u32(),
+  soldCount: __t.u32(),
+  shelfValue: __t.f64(),
+  storageValue: __t.f64(),
+  soldValue: __t.f64(),
 });
 export type AnalyticsOverview = __Infer<typeof AnalyticsOverview>;
 
@@ -71,11 +69,23 @@ export const CategoryBreakdown = __t.object("CategoryBreakdown", {
 export type CategoryBreakdown = __Infer<typeof CategoryBreakdown>;
 
 export const CategoryDetail = __t.object("CategoryDetail", {
-  count: __t.u32(),
+  shelfCount: __t.u32(),
+  storageCount: __t.u32(),
+  soldCount: __t.u32(),
   totalValue: __t.f64(),
+  avgItemValue: __t.f64(),
+  sellThroughRate: __t.f64(),
   valuePct: __t.f64(),
 });
 export type CategoryDetail = __Infer<typeof CategoryDetail>;
+
+export const ClaimedPhoto = __t.object("ClaimedPhoto", {
+  id: __t.u64(),
+  imageBytes: __t.byteArray(),
+  claimedAt: __t.timestamp(),
+  claimedBy: __t.identity(),
+});
+export type ClaimedPhoto = __Infer<typeof ClaimedPhoto>;
 
 export const Company = __t.object("Company", {
   id: __t.u64(),
@@ -85,15 +95,14 @@ export const Company = __t.object("Company", {
 });
 export type Company = __Infer<typeof Company>;
 
-// The tagged union or sum type for the algebraic type `Condition`.
-export const Condition = __t.enum("Condition", {
-  New: __t.unit(),
-  LikeNew: __t.unit(),
-  Good: __t.unit(),
-  Fair: __t.unit(),
-  Poor: __t.unit(),
+export const DetectionInput = __t.object("DetectionInput", {
+  get category() {
+    return Category;
+  },
+  count: __t.u32(),
+  totalValue: __t.f64(),
 });
-export type Condition = __Infer<typeof Condition>;
+export type DetectionInput = __Infer<typeof DetectionInput>;
 
 export const Employee = __t.object("Employee", {
   id: __t.identity(),
@@ -107,76 +116,64 @@ export const EmployeeStat = __t.object("EmployeeStat", {
 });
 export type EmployeeStat = __Infer<typeof EmployeeStat>;
 
-export const InventoryItem = __t.object("InventoryItem", {
+export const InventoryCategory = __t.object("InventoryCategory", {
   id: __t.u64(),
-  itemInformationId: __t.u64(),
   companyId: __t.u64(),
-  imageBytes: __t.byteArray(),
-  get status() {
-    return Status;
-  },
-  price: __t.f64(),
-});
-export type InventoryItem = __Infer<typeof InventoryItem>;
-
-export const ItemClassification = __t.object("ItemClassification", {
-  id: __t.u64(),
-  itemInformationId: __t.u64(),
-  companyId: __t.u64(),
-  get predictedCategory() {
-    return Category;
-  },
-  get predictedCondition() {
-    return Condition;
-  },
-  predictedPrice: __t.f64(),
-});
-export type ItemClassification = __Infer<typeof ItemClassification>;
-
-export const ItemInformation = __t.object("ItemInformation", {
-  id: __t.u64(),
-  processedImageId: __t.u64(),
-  companyId: __t.u64(),
-  confirmedBy: __t.identity(),
-  imageBytes: __t.byteArray(),
   get category() {
     return Category;
   },
-  get condition() {
-    return Condition;
-  },
-  estimatedPrice: __t.f64(),
+  shelfCount: __t.u32(),
+  storageCount: __t.u32(),
+  soldCount: __t.u32(),
+  totalValue: __t.f64(),
+  categoryImageBytes: __t.byteArray(),
 });
-export type ItemInformation = __Infer<typeof ItemInformation>;
+export type InventoryCategory = __Infer<typeof InventoryCategory>;
 
 export const ModelAccuracy = __t.object("ModelAccuracy", {
-  totalClassified: __t.u32(),
+  totalProcessed: __t.u32(),
+  rejectionRatePct: __t.f64(),
   categoryAccuracyPct: __t.f64(),
-  avgPriceDeltaPct: __t.f64(),
+  avgCountDeltaPct: __t.f64(),
+  avgValueDeltaPct: __t.f64(),
 });
 export type ModelAccuracy = __Infer<typeof ModelAccuracy>;
 
-export const ProcessedImage = __t.object("ProcessedImage", {
+export const PendingPhoto = __t.object("PendingPhoto", {
   id: __t.u64(),
+  imageBytes: __t.byteArray(),
+});
+export type PendingPhoto = __Infer<typeof PendingPhoto>;
+
+export const PredictionLog = __t.object("PredictionLog", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  get predictedCategory() {
+    return Category;
+  },
+  predictedCount: __t.u32(),
+  predictedTotalValue: __t.f64(),
+  get confirmedCategory() {
+    return Category;
+  },
+  confirmedCount: __t.u32(),
+  confirmedTotalValue: __t.f64(),
+  wasRejected: __t.bool(),
+});
+export type PredictionLog = __Infer<typeof PredictionLog>;
+
+export const ReviewItem = __t.object("ReviewItem", {
+  id: __t.u64(),
+  scanId: __t.u64(),
   companyId: __t.u64(),
   imageBytes: __t.byteArray(),
   get predictedCategory() {
     return Category;
   },
-  get predictedCondition() {
-    return Condition;
-  },
-  predictedPrice: __t.f64(),
+  predictedCount: __t.u32(),
+  predictedTotalValue: __t.f64(),
 });
-export type ProcessedImage = __Infer<typeof ProcessedImage>;
-
-export const ProcessingImage = __t.object("ProcessingImage", {
-  id: __t.u64(),
-  imageBytes: __t.byteArray(),
-  claimedAt: __t.timestamp(),
-  claimedBy: __t.identity(),
-});
-export type ProcessingImage = __Infer<typeof ProcessingImage>;
+export type ReviewItem = __Infer<typeof ReviewItem>;
 
 // The tagged union or sum type for the algebraic type `Status`.
 export const Status = __t.enum("Status", {
@@ -186,11 +183,18 @@ export const Status = __t.enum("Status", {
 });
 export type Status = __Infer<typeof Status>;
 
-export const UnprocessedImage = __t.object("UnprocessedImage", {
+export const StockEntry = __t.object("StockEntry", {
   id: __t.u64(),
-  imageBytes: __t.byteArray(),
+  companyId: __t.u64(),
+  get category() {
+    return Category;
+  },
+  itemsAdded: __t.u32(),
+  valueAtScan: __t.f64(),
+  scannedAt: __t.timestamp(),
+  confirmedBy: __t.identity(),
 });
-export type UnprocessedImage = __Infer<typeof UnprocessedImage>;
+export type StockEntry = __Infer<typeof StockEntry>;
 
 export const User = __t.object("User", {
   id: __t.identity(),
@@ -203,13 +207,4 @@ export const VisionClient = __t.object("VisionClient", {
   identity: __t.identity(),
 });
 export type VisionClient = __Infer<typeof VisionClient>;
-
-export const ZoneStat = __t.object("ZoneStat", {
-  count: __t.u32(),
-  value: __t.f64(),
-  get topCategories() {
-    return __t.array(Category);
-  },
-});
-export type ZoneStat = __Infer<typeof ZoneStat>;
 

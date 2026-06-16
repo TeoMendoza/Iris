@@ -11,7 +11,9 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  totalClassified: __t.u32().name("total_classified"),
+  totalProcessed: __t.u32().name("total_processed"),
+  rejectionRatePct: __t.f64().name("rejection_rate_pct"),
   categoryAccuracyPct: __t.f64().name("category_accuracy_pct"),
-  avgPriceDeltaPct: __t.f64().name("avg_price_delta_pct"),
+  avgCountDeltaPct: __t.f64().name("avg_count_delta_pct"),
+  avgValueDeltaPct: __t.f64().name("avg_value_delta_pct"),
 });
