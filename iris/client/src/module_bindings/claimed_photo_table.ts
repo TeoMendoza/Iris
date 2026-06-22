@@ -15,4 +15,5 @@ export default __t.row({
   imageBytes: __t.byteArray().name("image_bytes"),
   claimedAt: __t.timestamp().name("claimed_at"),
   claimedBy: __t.identity().name("claimed_by"),
+  uploadedBy: __t.identity().name("uploaded_by"),
 });

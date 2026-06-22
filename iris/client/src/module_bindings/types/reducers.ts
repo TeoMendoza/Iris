@@ -7,6 +7,7 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import ApproveReviewItemReducer from "../approve_review_item_reducer";
+import BranchReviewItemReducer from "../branch_review_item_reducer";
 import ClaimPhotosReducer from "../claim_photos_reducer";
 import CreateUserReducer from "../create_user_reducer";
 import JoinCompanyReducer from "../join_company_reducer";
@@ -17,6 +18,7 @@ import SubmitAnalysisReducer from "../submit_analysis_reducer";
 import UploadPhotoReducer from "../upload_photo_reducer";
 
 export type ApproveReviewItemParams = __Infer<typeof ApproveReviewItemReducer>;
+export type BranchReviewItemParams = __Infer<typeof BranchReviewItemReducer>;
 export type ClaimPhotosParams = __Infer<typeof ClaimPhotosReducer>;
 export type CreateUserParams = __Infer<typeof CreateUserReducer>;
 export type JoinCompanyParams = __Infer<typeof JoinCompanyReducer>;

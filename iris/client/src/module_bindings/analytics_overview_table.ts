@@ -17,7 +17,7 @@ export default __t.row({
   shelfCount: __t.u32().name("shelf_count"),
   storageCount: __t.u32().name("storage_count"),
   soldCount: __t.u32().name("sold_count"),
-  shelfValue: __t.f64().name("shelf_value"),
-  storageValue: __t.f64().name("storage_value"),
-  soldValue: __t.f64().name("sold_value"),
+  shelfValue: __t.u32().name("shelf_value"),
+  storageValue: __t.u32().name("storage_value"),
+  soldValue: __t.u32().name("sold_value"),
 });

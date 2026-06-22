@@ -16,4 +16,6 @@ export default __t.row({
   categoryAccuracyPct: __t.f64().name("category_accuracy_pct"),
   avgCountDeltaPct: __t.f64().name("avg_count_delta_pct"),
   avgValueDeltaPct: __t.f64().name("avg_value_delta_pct"),
+  missedCount: __t.u32().name("missed_count"),
+  missedRatePct: __t.f64().name("missed_rate_pct"),
 });

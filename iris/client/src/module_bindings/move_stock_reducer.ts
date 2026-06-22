@@ -16,11 +16,14 @@ import {
 } from "./types";
 
 export default {
-  get category() {
+  get fromCategory() {
     return Category;
   },
   get fromStatus() {
     return Status;
+  },
+  get toCategory() {
+    return Category;
   },
   get toStatus() {
     return Status;

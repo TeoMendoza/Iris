@@ -21,7 +21,7 @@ export default __t.row({
     return Category;
   },
   itemsAdded: __t.u32().name("items_added"),
-  valueAtScan: __t.f64().name("value_at_scan"),
+  valueAtScan: __t.u32().name("value_at_scan"),
   scannedAt: __t.timestamp().name("scanned_at"),
   confirmedBy: __t.identity().name("confirmed_by"),
 });

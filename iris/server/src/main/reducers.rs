@@ -1,14 +1,44 @@
-use spacetimedb::{reducer, ReducerContext, Table};
+use spacetimedb::{reducer, ReducerContext, ScheduleAt, TimeDuration, Table};
 use rand::RngCore;
 use crate::*;
 
 const CLAIM_BATCH_SIZE: usize = 10;
+const CLOCK_TICK_INTERVAL_MICROS: i64 = 5 * 60 * 1_000_000;
 
 #[reducer(init)]
 pub fn init(ctx: &ReducerContext) {
     let code = format!("{:016x}", ctx.rng().next_u64());
     let vision_key = format!("{:016x}", ctx.rng().next_u64());
-    ctx.db.company().insert(Company { id: 0, name: "iris-labs".to_string(), code, vision_key });
+    let company = ctx.db.company().insert(Company { id: 0, name: "iris-labs".to_string(), code, vision_key });
+
+    for category in [
+        Category::Clothing, Category::Footwear, Category::Electronics, Category::Furniture,
+        Category::Food, Category::Books, Category::Tools, Category::Toys, Category::Misc,
+    ] {
+        ctx.db.inventory_category().insert(InventoryCategory {
+            id: 0,
+            company_id: company.id,
+            category,
+            shelf_count: 0,
+            storage_count: 0,
+            sold_count: 0,
+            total_value: 0,
+        });
+    }
+
+    ctx.db.clock().insert(Clock { id: 0, now: ctx.timestamp });
+    ctx.db.clock_tick().insert(ClockTick {
+        scheduled_id: 0,
+        scheduled_at: ScheduleAt::Interval(TimeDuration::from_micros(CLOCK_TICK_INTERVAL_MICROS)),
+    });
+}
+
+#[reducer]
+pub fn tick_clock(ctx: &ReducerContext, _tick: ClockTick) {
+    match ctx.db.clock().iter().next() {
+        Some(existing) => { ctx.db.clock().id().update(Clock { now: ctx.timestamp, ..existing }); }
+        None => { ctx.db.clock().insert(Clock { id: 0, now: ctx.timestamp }); }
+    }
 }
 
 #[reducer(client_connected)]
@@ -64,6 +94,7 @@ pub fn claim_photos(ctx: &ReducerContext) -> Result<(), String> {
             image_bytes: photo.image_bytes,
             claimed_at: ctx.timestamp,
             claimed_by: ctx.sender(),
+            uploaded_by: photo.uploaded_by,
         });
     }
     Ok(())
@@ -89,34 +120,30 @@ pub fn submit_analysis(ctx: &ReducerContext, claimed_id: u64, detections: Vec<De
             predicted_category: detection.category,
             predicted_count: detection.count,
             predicted_total_value: detection.total_value,
+            uploaded_by: photo.uploaded_by,
+            was_branched: false,
         });
     }
     Ok(())
 }
 
 #[reducer]
-pub fn approve_review_item(ctx: &ReducerContext, review_item_id: u64, category: Category, count: u32, total_value: f64, use_as_category_photo: bool) -> Result<(), String> {
+pub fn approve_review_item(ctx: &ReducerContext, review_item_id: u64, category: Category, count: u32, total_value: u32) -> Result<(), String> {
     ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
     let item = ctx.db.review_item().id().find(review_item_id).ok_or("Not found")?;
     let company_id = item.company_id;
-    let image_bytes = item.image_bytes.clone();
     let predicted_category = item.predicted_category.clone();
     let predicted_count = item.predicted_count;
     let predicted_total_value = item.predicted_total_value;
+    let scan_id = item.scan_id;
+    let uploaded_by = item.uploaded_by;
+    let was_missed = item.was_branched;
 
     match ctx.db.inventory_category().category().find(&category) {
         Some(existing) => {
-            let new_image = if use_as_category_photo {
-                image_bytes.clone()
-            } else if existing.category_image_bytes.is_empty() {
-                image_bytes.clone()
-            } else {
-                existing.category_image_bytes.clone()
-            };
             ctx.db.inventory_category().id().update(InventoryCategory {
                 storage_count: existing.storage_count + count,
                 total_value: existing.total_value + total_value,
-                category_image_bytes: new_image,
                 ..existing
             });
         }
@@ -129,7 +156,6 @@ pub fn approve_review_item(ctx: &ReducerContext, review_item_id: u64, category: 
                 storage_count: count,
                 sold_count: 0,
                 total_value,
-                category_image_bytes: image_bytes.clone(),
             });
         }
     }
@@ -154,6 +180,11 @@ pub fn approve_review_item(ctx: &ReducerContext, review_item_id: u64, category: 
         confirmed_count: count,
         confirmed_total_value: total_value,
         was_rejected: false,
+        was_missed,
+        logged_at: ctx.timestamp,
+        scan_id,
+        uploaded_by,
+        confirmed_by: ctx.sender(),
     });
 
     ctx.db.review_item().id().delete(&review_item_id);
@@ -165,53 +196,166 @@ pub fn reject_review_item(ctx: &ReducerContext, review_item_id: u64) -> Result<(
     ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
     let item = ctx.db.review_item().id().find(review_item_id).ok_or("Not found")?;
 
-    ctx.db.prediction_log().insert(PredictionLog {
-        id: 0,
-        company_id: item.company_id,
-        predicted_category: item.predicted_category.clone(),
-        predicted_count: item.predicted_count,
-        predicted_total_value: item.predicted_total_value,
-        confirmed_category: item.predicted_category,
-        confirmed_count: 0,
-        confirmed_total_value: 0.0,
-        was_rejected: true,
-    });
+    if !item.was_branched {
+        ctx.db.prediction_log().insert(PredictionLog {
+            id: 0,
+            company_id: item.company_id,
+            predicted_category: item.predicted_category.clone(),
+            predicted_count: item.predicted_count,
+            predicted_total_value: item.predicted_total_value,
+            confirmed_category: item.predicted_category,
+            confirmed_count: 0,
+            confirmed_total_value: 0,
+            was_rejected: true,
+            was_missed: false,
+            logged_at: ctx.timestamp,
+            scan_id: item.scan_id,
+            uploaded_by: item.uploaded_by,
+            confirmed_by: ctx.sender(),
+        });
+    }
 
     ctx.db.review_item().id().delete(&review_item_id);
     Ok(())
 }
 
 #[reducer]
-pub fn move_stock(ctx: &ReducerContext, category: Category, from_status: Status, to_status: Status, count: u32) -> Result<(), String> {
+pub fn branch_review_item(ctx: &ReducerContext, source_review_item_id: u64) -> Result<(), String> {
     ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
-    let cat = ctx.db.inventory_category().category().find(&category).ok_or("Category not found")?;
+    let source = ctx.db.review_item().id().find(source_review_item_id).ok_or("Not found")?;
+    let predicted_category = source.predicted_category.clone();
+    let predicted_count = source.predicted_count;
+    let predicted_total_value = source.predicted_total_value;
+
+    ctx.db.review_item().insert(ReviewItem {
+        id: 0,
+        scan_id: source.scan_id,
+        company_id: source.company_id,
+        image_bytes: source.image_bytes,
+        predicted_category,
+        predicted_count,
+        predicted_total_value,
+        uploaded_by: source.uploaded_by,
+        was_branched: true,
+    });
+
+    Ok(())
+}
+
+#[reducer]
+pub fn move_stock(ctx: &ReducerContext, from_category: Category, from_status: Status, to_category: Category, to_status: Status, count: u32) -> Result<(), String> {
+    ctx.db.employee().id().find(ctx.sender()).ok_or("Unauthorized")?;
+    if from_category == to_category && from_status == to_status {
+        return Err("Source and destination are the same".to_string());
+    }
+    let from_cat = ctx.db.inventory_category().category().find(&from_category).ok_or("Category not found")?;
+    let company_id = from_cat.company_id;
 
     let from_count = match from_status {
-        Status::Shelf   => cat.shelf_count,
-        Status::Storage => cat.storage_count,
-        Status::Sold    => cat.sold_count,
+        Status::Shelf   => from_cat.shelf_count,
+        Status::Storage => from_cat.storage_count,
+        Status::Sold    => from_cat.sold_count,
     };
 
     if count > from_count {
         return Err("Not enough items in that status".to_string());
     }
 
-    let (shelf_count, storage_count, sold_count) = {
-        let (mut s, mut st, mut so) = (cat.shelf_count, cat.storage_count, cat.sold_count);
-        match from_status {
-            Status::Shelf   => s  -= count,
-            Status::Storage => st -= count,
-            Status::Sold    => so -= count,
-        }
-        match to_status {
-            Status::Shelf   => s  += count,
-            Status::Storage => st += count,
-            Status::Sold    => so += count,
-        }
-        (s, st, so)
+    let from_total = from_cat.shelf_count + from_cat.storage_count + from_cat.sold_count;
+    let moved_value = if from_total > 0 {
+        (((from_cat.total_value as f64 / from_total as f64) * count as f64).round() as u32).min(from_cat.total_value)
+    } else {
+        0
     };
 
-    ctx.db.inventory_category().id().update(InventoryCategory { shelf_count, storage_count, sold_count, ..cat });
+    if from_category == to_category {
+        let (shelf_count, storage_count, sold_count) = {
+            let (mut s, mut st, mut so) = (from_cat.shelf_count, from_cat.storage_count, from_cat.sold_count);
+            match from_status {
+                Status::Shelf   => s  -= count,
+                Status::Storage => st -= count,
+                Status::Sold    => so -= count,
+            }
+            match to_status {
+                Status::Shelf   => s  += count,
+                Status::Storage => st += count,
+                Status::Sold    => so += count,
+            }
+            (s, st, so)
+        };
+        ctx.db.inventory_category().id().update(InventoryCategory { shelf_count, storage_count, sold_count, ..from_cat });
+    } else {
+        let (shelf_count, storage_count, sold_count) = {
+            let (mut s, mut st, mut so) = (from_cat.shelf_count, from_cat.storage_count, from_cat.sold_count);
+            match from_status {
+                Status::Shelf   => s  -= count,
+                Status::Storage => st -= count,
+                Status::Sold    => so -= count,
+            }
+            (s, st, so)
+        };
+        ctx.db.inventory_category().id().update(InventoryCategory {
+            shelf_count,
+            storage_count,
+            sold_count,
+            total_value: from_cat.total_value - moved_value,
+            ..from_cat
+        });
+
+        match ctx.db.inventory_category().category().find(&to_category) {
+            Some(existing) => {
+                let (shelf_count, storage_count, sold_count) = {
+                    let (mut s, mut st, mut so) = (existing.shelf_count, existing.storage_count, existing.sold_count);
+                    match to_status {
+                        Status::Shelf   => s  += count,
+                        Status::Storage => st += count,
+                        Status::Sold    => so += count,
+                    }
+                    (s, st, so)
+                };
+                ctx.db.inventory_category().id().update(InventoryCategory {
+                    shelf_count,
+                    storage_count,
+                    sold_count,
+                    total_value: existing.total_value + moved_value,
+                    ..existing
+                });
+            }
+            None => {
+                let (shelf_count, storage_count, sold_count) = {
+                    let (mut s, mut st, mut so) = (0u32, 0u32, 0u32);
+                    match to_status {
+                        Status::Shelf   => s  += count,
+                        Status::Storage => st += count,
+                        Status::Sold    => so += count,
+                    }
+                    (s, st, so)
+                };
+                ctx.db.inventory_category().insert(InventoryCategory {
+                    id: 0,
+                    company_id,
+                    category: to_category.clone(),
+                    shelf_count,
+                    storage_count,
+                    sold_count,
+                    total_value: moved_value,
+                });
+            }
+        }
+    }
+
+    ctx.db.stock_movement().insert(StockMovement {
+        id: 0,
+        company_id,
+        from_category,
+        to_category,
+        from_status,
+        to_status,
+        count,
+        moved_by: ctx.sender(),
+        moved_at: ctx.timestamp,
+    });
+
     Ok(())
 }
 
@@ -221,6 +365,6 @@ pub fn upload_photo(ctx: &ReducerContext, image_bytes: Vec<u8>) -> Result<(), St
     if image_bytes.is_empty() {
         return Err("image_bytes is empty".to_string());
     }
-    ctx.db.pending_photo().insert(PendingPhoto { id: 0, image_bytes });
+    ctx.db.pending_photo().insert(PendingPhoto { id: 0, image_bytes, uploaded_by: ctx.sender() });
     Ok(())
 }

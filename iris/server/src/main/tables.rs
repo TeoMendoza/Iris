@@ -1,4 +1,17 @@
-use spacetimedb::{Identity, SpacetimeType, Timestamp, table};
+use spacetimedb::{Identity, SpacetimeType, Timestamp, ScheduleAt, table};
+use crate::*;
+
+#[table(accessor = clock)]
+pub struct Clock {
+    #[primary_key] #[auto_inc] pub id: u64,
+    pub now: Timestamp,
+}
+
+#[table(accessor = clock_tick, scheduled(tick_clock))]
+pub struct ClockTick {
+    #[primary_key] #[auto_inc] pub scheduled_id: u64,
+    pub scheduled_at: ScheduleAt,
+}
 
 #[table(accessor = company, public)]
 pub struct Company {
@@ -30,6 +43,7 @@ pub struct VisionClient {
 pub struct PendingPhoto {
     #[primary_key] #[auto_inc] pub id: u64,
     pub image_bytes: Vec<u8>,
+    pub uploaded_by: Identity,
 }
 
 #[table(accessor = claimed_photo, public)]
@@ -38,6 +52,7 @@ pub struct ClaimedPhoto {
     pub image_bytes: Vec<u8>,
     pub claimed_at: Timestamp,
     pub claimed_by: Identity,
+    pub uploaded_by: Identity,
 }
 
 #[table(accessor = review_item, public, index(accessor = review_items_by_company, btree(columns = [company_id])))]
@@ -48,7 +63,9 @@ pub struct ReviewItem {
     pub image_bytes: Vec<u8>,
     pub predicted_category: Category,
     pub predicted_count: u32,
-    pub predicted_total_value: f64,
+    pub predicted_total_value: u32,
+    pub uploaded_by: Identity,
+    pub was_branched: bool,
 }
 
 #[table(accessor = inventory_category, public, index(accessor = inv_categories_by_company, btree(columns = [company_id])))]
@@ -59,8 +76,7 @@ pub struct InventoryCategory {
     pub shelf_count: u32,
     pub storage_count: u32,
     pub sold_count: u32,
-    pub total_value: f64,
-    pub category_image_bytes: Vec<u8>,
+    pub total_value: u32,
 }
 
 #[table(accessor = stock_entry, public,
@@ -71,9 +87,24 @@ pub struct StockEntry {
     pub company_id: u64,
     pub category: Category,
     pub items_added: u32,
-    pub value_at_scan: f64,
+    pub value_at_scan: u32,
     pub scanned_at: Timestamp,
     pub confirmed_by: Identity,
+}
+
+#[table(accessor = stock_movement, public,
+    index(accessor = stock_movements_by_company, btree(columns = [company_id])),
+    index(accessor = stock_movements_by_mover, btree(columns = [moved_by])))]
+pub struct StockMovement {
+    #[primary_key] #[auto_inc] pub id: u64,
+    pub company_id: u64,
+    pub from_category: Category,
+    pub to_category: Category,
+    pub from_status: Status,
+    pub to_status: Status,
+    pub count: u32,
+    pub moved_by: Identity,
+    pub moved_at: Timestamp,
 }
 
 #[table(accessor = prediction_log,
@@ -83,11 +114,16 @@ pub struct PredictionLog {
     pub company_id: u64,
     pub predicted_category: Category,
     pub predicted_count: u32,
-    pub predicted_total_value: f64,
+    pub predicted_total_value: u32,
     pub confirmed_category: Category,
     pub confirmed_count: u32,
-    pub confirmed_total_value: f64,
+    pub confirmed_total_value: u32,
     pub was_rejected: bool,
+    pub was_missed: bool,
+    pub logged_at: Timestamp,
+    pub scan_id: u64,
+    pub uploaded_by: Identity,
+    pub confirmed_by: Identity,
 }
 
 // ── Enums ──────────────────────────────────────────────────
@@ -116,7 +152,7 @@ pub enum Status {
 pub struct DetectionInput {
     pub category: Category,
     pub count: u32,
-    pub total_value: f64,
+    pub total_value: u32,
 }
 
 // ── Analytics types ────────────────────────────────────────
@@ -129,9 +165,9 @@ pub struct AnalyticsOverview {
     pub shelf_count: u32,
     pub storage_count: u32,
     pub sold_count: u32,
-    pub shelf_value: f64,
-    pub storage_value: f64,
-    pub sold_value: f64,
+    pub shelf_value: u32,
+    pub storage_value: u32,
+    pub sold_value: u32,
 }
 
 #[derive(SpacetimeType)]
@@ -139,8 +175,8 @@ pub struct CategoryDetail {
     pub shelf_count: u32,
     pub storage_count: u32,
     pub sold_count: u32,
-    pub total_value: f64,
-    pub avg_item_value: f64,
+    pub total_value: u32,
+    pub avg_item_value: u32,
     pub sell_through_rate: f64,
     pub value_pct: f64,
 }
@@ -165,10 +201,47 @@ pub struct ModelAccuracy {
     pub category_accuracy_pct: f64,
     pub avg_count_delta_pct: f64,
     pub avg_value_delta_pct: f64,
+    pub missed_count: u32,
+    pub missed_rate_pct: f64,
 }
 
 #[derive(SpacetimeType)]
-pub struct EmployeeStat {
+pub struct EmployeeActivity {
+    pub identity: Identity,
     pub name: String,
-    pub items_handled: u32,
+    pub items_approved: u32,
+    pub scans_submitted: u32,
+    pub moves_performed: u32,
+    pub missed_items_reported: u32,
+    pub top_category: Option<String>,
+}
+
+#[derive(SpacetimeType)]
+pub struct PeriodStats {
+    pub items_added: u32,
+    pub items_added_value: u32,
+    pub items_sold: u32,
+    pub items_sold_value: u32,
+    pub moves_performed: u32,
+}
+
+#[derive(SpacetimeType)]
+pub struct CategoryPeriodDetail {
+    pub items_added: u32,
+    pub items_added_value: u32,
+    pub items_sold: u32,
+    pub items_sold_value: u32,
+}
+
+#[derive(SpacetimeType)]
+pub struct CategoryPeriodBreakdown {
+    pub clothing: CategoryPeriodDetail,
+    pub footwear: CategoryPeriodDetail,
+    pub electronics: CategoryPeriodDetail,
+    pub furniture: CategoryPeriodDetail,
+    pub food: CategoryPeriodDetail,
+    pub books: CategoryPeriodDetail,
+    pub tools: CategoryPeriodDetail,
+    pub toys: CategoryPeriodDetail,
+    pub misc: CategoryPeriodDetail,
 }

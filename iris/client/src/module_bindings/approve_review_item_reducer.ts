@@ -20,6 +20,5 @@ export default {
     return Category;
   },
   count: __t.u32(),
-  totalValue: __t.f64(),
-  useAsCategoryPhoto: __t.bool(),
+  totalValue: __t.u32(),
 };

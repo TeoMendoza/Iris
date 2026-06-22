@@ -17,9 +17,9 @@ export const AnalyticsOverview = __t.object("AnalyticsOverview", {
   shelfCount: __t.u32(),
   storageCount: __t.u32(),
   soldCount: __t.u32(),
-  shelfValue: __t.f64(),
-  storageValue: __t.f64(),
-  soldValue: __t.f64(),
+  shelfValue: __t.u32(),
+  storageValue: __t.u32(),
+  soldValue: __t.u32(),
 });
 export type AnalyticsOverview = __Infer<typeof AnalyticsOverview>;
 
@@ -72,20 +72,72 @@ export const CategoryDetail = __t.object("CategoryDetail", {
   shelfCount: __t.u32(),
   storageCount: __t.u32(),
   soldCount: __t.u32(),
-  totalValue: __t.f64(),
-  avgItemValue: __t.f64(),
+  totalValue: __t.u32(),
+  avgItemValue: __t.u32(),
   sellThroughRate: __t.f64(),
   valuePct: __t.f64(),
 });
 export type CategoryDetail = __Infer<typeof CategoryDetail>;
+
+export const CategoryPeriodBreakdown = __t.object("CategoryPeriodBreakdown", {
+  get clothing() {
+    return CategoryPeriodDetail;
+  },
+  get footwear() {
+    return CategoryPeriodDetail;
+  },
+  get electronics() {
+    return CategoryPeriodDetail;
+  },
+  get furniture() {
+    return CategoryPeriodDetail;
+  },
+  get food() {
+    return CategoryPeriodDetail;
+  },
+  get books() {
+    return CategoryPeriodDetail;
+  },
+  get tools() {
+    return CategoryPeriodDetail;
+  },
+  get toys() {
+    return CategoryPeriodDetail;
+  },
+  get misc() {
+    return CategoryPeriodDetail;
+  },
+});
+export type CategoryPeriodBreakdown = __Infer<typeof CategoryPeriodBreakdown>;
+
+export const CategoryPeriodDetail = __t.object("CategoryPeriodDetail", {
+  itemsAdded: __t.u32(),
+  itemsAddedValue: __t.u32(),
+  itemsSold: __t.u32(),
+  itemsSoldValue: __t.u32(),
+});
+export type CategoryPeriodDetail = __Infer<typeof CategoryPeriodDetail>;
 
 export const ClaimedPhoto = __t.object("ClaimedPhoto", {
   id: __t.u64(),
   imageBytes: __t.byteArray(),
   claimedAt: __t.timestamp(),
   claimedBy: __t.identity(),
+  uploadedBy: __t.identity(),
 });
 export type ClaimedPhoto = __Infer<typeof ClaimedPhoto>;
+
+export const Clock = __t.object("Clock", {
+  id: __t.u64(),
+  now: __t.timestamp(),
+});
+export type Clock = __Infer<typeof Clock>;
+
+export const ClockTick = __t.object("ClockTick", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type ClockTick = __Infer<typeof ClockTick>;
 
 export const Company = __t.object("Company", {
   id: __t.u64(),
@@ -100,7 +152,7 @@ export const DetectionInput = __t.object("DetectionInput", {
     return Category;
   },
   count: __t.u32(),
-  totalValue: __t.f64(),
+  totalValue: __t.u32(),
 });
 export type DetectionInput = __Infer<typeof DetectionInput>;
 
@@ -110,11 +162,16 @@ export const Employee = __t.object("Employee", {
 });
 export type Employee = __Infer<typeof Employee>;
 
-export const EmployeeStat = __t.object("EmployeeStat", {
+export const EmployeeActivity = __t.object("EmployeeActivity", {
+  identity: __t.identity(),
   name: __t.string(),
-  itemsHandled: __t.u32(),
+  itemsApproved: __t.u32(),
+  scansSubmitted: __t.u32(),
+  movesPerformed: __t.u32(),
+  missedItemsReported: __t.u32(),
+  topCategory: __t.option(__t.string()),
 });
-export type EmployeeStat = __Infer<typeof EmployeeStat>;
+export type EmployeeActivity = __Infer<typeof EmployeeActivity>;
 
 export const InventoryCategory = __t.object("InventoryCategory", {
   id: __t.u64(),
@@ -125,8 +182,7 @@ export const InventoryCategory = __t.object("InventoryCategory", {
   shelfCount: __t.u32(),
   storageCount: __t.u32(),
   soldCount: __t.u32(),
-  totalValue: __t.f64(),
-  categoryImageBytes: __t.byteArray(),
+  totalValue: __t.u32(),
 });
 export type InventoryCategory = __Infer<typeof InventoryCategory>;
 
@@ -136,14 +192,26 @@ export const ModelAccuracy = __t.object("ModelAccuracy", {
   categoryAccuracyPct: __t.f64(),
   avgCountDeltaPct: __t.f64(),
   avgValueDeltaPct: __t.f64(),
+  missedCount: __t.u32(),
+  missedRatePct: __t.f64(),
 });
 export type ModelAccuracy = __Infer<typeof ModelAccuracy>;
 
 export const PendingPhoto = __t.object("PendingPhoto", {
   id: __t.u64(),
   imageBytes: __t.byteArray(),
+  uploadedBy: __t.identity(),
 });
 export type PendingPhoto = __Infer<typeof PendingPhoto>;
+
+export const PeriodStats = __t.object("PeriodStats", {
+  itemsAdded: __t.u32(),
+  itemsAddedValue: __t.u32(),
+  itemsSold: __t.u32(),
+  itemsSoldValue: __t.u32(),
+  movesPerformed: __t.u32(),
+});
+export type PeriodStats = __Infer<typeof PeriodStats>;
 
 export const PredictionLog = __t.object("PredictionLog", {
   id: __t.u64(),
@@ -152,13 +220,18 @@ export const PredictionLog = __t.object("PredictionLog", {
     return Category;
   },
   predictedCount: __t.u32(),
-  predictedTotalValue: __t.f64(),
+  predictedTotalValue: __t.u32(),
   get confirmedCategory() {
     return Category;
   },
   confirmedCount: __t.u32(),
-  confirmedTotalValue: __t.f64(),
+  confirmedTotalValue: __t.u32(),
   wasRejected: __t.bool(),
+  wasMissed: __t.bool(),
+  loggedAt: __t.timestamp(),
+  scanId: __t.u64(),
+  uploadedBy: __t.identity(),
+  confirmedBy: __t.identity(),
 });
 export type PredictionLog = __Infer<typeof PredictionLog>;
 
@@ -171,7 +244,9 @@ export const ReviewItem = __t.object("ReviewItem", {
     return Category;
   },
   predictedCount: __t.u32(),
-  predictedTotalValue: __t.f64(),
+  predictedTotalValue: __t.u32(),
+  uploadedBy: __t.identity(),
+  wasBranched: __t.bool(),
 });
 export type ReviewItem = __Infer<typeof ReviewItem>;
 
@@ -190,11 +265,32 @@ export const StockEntry = __t.object("StockEntry", {
     return Category;
   },
   itemsAdded: __t.u32(),
-  valueAtScan: __t.f64(),
+  valueAtScan: __t.u32(),
   scannedAt: __t.timestamp(),
   confirmedBy: __t.identity(),
 });
 export type StockEntry = __Infer<typeof StockEntry>;
+
+export const StockMovement = __t.object("StockMovement", {
+  id: __t.u64(),
+  companyId: __t.u64(),
+  get fromCategory() {
+    return Category;
+  },
+  get toCategory() {
+    return Category;
+  },
+  get fromStatus() {
+    return Status;
+  },
+  get toStatus() {
+    return Status;
+  },
+  count: __t.u32(),
+  movedBy: __t.identity(),
+  movedAt: __t.timestamp(),
+});
+export type StockMovement = __Infer<typeof StockMovement>;
 
 export const User = __t.object("User", {
   id: __t.identity(),

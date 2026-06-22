@@ -11,6 +11,9 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  name: __t.string(),
-  itemsHandled: __t.u32().name("items_handled"),
+  itemsAdded: __t.u32().name("items_added"),
+  itemsAddedValue: __t.u32().name("items_added_value"),
+  itemsSold: __t.u32().name("items_sold"),
+  itemsSoldValue: __t.u32().name("items_sold_value"),
+  movesPerformed: __t.u32().name("moves_performed"),
 });

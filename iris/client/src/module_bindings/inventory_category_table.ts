@@ -23,6 +23,5 @@ export default __t.row({
   shelfCount: __t.u32().name("shelf_count"),
   storageCount: __t.u32().name("storage_count"),
   soldCount: __t.u32().name("sold_count"),
-  totalValue: __t.f64().name("total_value"),
-  categoryImageBytes: __t.byteArray().name("category_image_bytes"),
+  totalValue: __t.u32().name("total_value"),
 });

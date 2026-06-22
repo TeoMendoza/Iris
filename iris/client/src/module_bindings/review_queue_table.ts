@@ -23,5 +23,7 @@ export default __t.row({
     return Category.name("predicted_category");
   },
   predictedCount: __t.u32().name("predicted_count"),
-  predictedTotalValue: __t.f64().name("predicted_total_value"),
+  predictedTotalValue: __t.u32().name("predicted_total_value"),
+  uploadedBy: __t.identity().name("uploaded_by"),
+  wasBranched: __t.bool().name("was_branched"),
 });

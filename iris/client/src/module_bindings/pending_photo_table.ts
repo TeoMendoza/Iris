@@ -13,4 +13,5 @@ import {
 export default __t.row({
   id: __t.u64().primaryKey(),
   imageBytes: __t.byteArray().name("image_bytes"),
+  uploadedBy: __t.identity().name("uploaded_by"),
 });

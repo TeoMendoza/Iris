@@ -91,7 +91,7 @@ def submit_analysis(token: str, claimed_id: int, detections: list[dict]):
         {
             "category": _enum(d["category"]),
             "count": d["count"],
-            "total_value": d["total_value"],
+            "total_value": int(round(d["total_value"])),
         }
         for d in detections
     ]
@@ -124,7 +124,7 @@ Return a JSON object with exactly this structure:
     {
       "category": "<value>",
       "count": <integer>,
-      "total_value": <number>
+      "total_value": <integer>
     }
   ]
 }
@@ -136,10 +136,12 @@ Guidelines:
   - One detection entry per category — do not split a category across multiple entries
   - count: the number of individual items of that category visible in the photo
   - total_value: the combined estimated resale/second-hand market value in USD for all items in that group
+  - total_value must be a whole dollar integer — no cents, round to the nearest dollar
   - Use realistic second-hand pricing, not retail
   - If items from a category are partially visible or clearly present, include them
   - If items do not clearly fit any category, use "Misc"
   - If only one category is present, the detections array will have a single entry
+  - Ignore humans entirely, and ignore any clothing or footwear currently being worn by a person — only count items that are not being worn (e.g. on a shelf, rack, table, or floor)
 
 Return ONLY the JSON object, no explanation or markdown.
 """
@@ -230,7 +232,7 @@ def main():
             detections = run_vision_model(image_bytes)
 
             submit_analysis(token, claimed_id, detections)
-            summary = ", ".join(f"{d['count']}x {d['category']} (${d['total_value']:.2f})" for d in detections)
+            summary = ", ".join(f"{d['count']}x {d['category']} (${d['total_value']})" for d in detections)
             print(f"Submitted photo {claimed_id}: {summary}")
 
         processing = []
