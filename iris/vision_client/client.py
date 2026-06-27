@@ -142,6 +142,7 @@ Guidelines:
   - If items do not clearly fit any category, use "Misc"
   - If only one category is present, the detections array will have a single entry
   - Ignore humans entirely, and ignore any clothing or footwear currently being worn by a person — only count items that are not being worn (e.g. on a shelf, rack, table, or floor)
+  - Do not count the background mat with measurements as an item — only count the items themselves.
 
 Return ONLY the JSON object, no explanation or markdown.
 """
